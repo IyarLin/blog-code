@@ -54,7 +54,7 @@ When both X and Y are discrete, we can use the distance correlation measure (see
 
 When either X or Y are discrete, and the other is continuous we can discretisize the continuous variable (using for example the procedure at *infotheo::discretize*) and use the method for 2 discrete variables mentioned above.
 
-The orientDAG package uses the approach outlined above to orient DAG skeleton edges. To demonstrate how it works let's go back to the example shown on my last post. 
+The [orientDAG](https://github.com/IyarLin/orientDAG) package uses the approach outlined above to orient DAG skeleton edges. To demonstrate how it works let's go back to the example shown on my last post. 
 
 We used the [simMixedDAG](https://github.com/IyarLin/simMixedDAG) package to simulate datasets from the DAG below:
 
