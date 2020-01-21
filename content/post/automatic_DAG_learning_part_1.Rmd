@@ -127,7 +127,7 @@ p2 <- ggdag(tidy_dag2, node_size = 28) + theme_dag_blank() + ggtitle("Estimated 
   scale_dag(expand_x = expand_scale(c(0.2, 0.2)), expand_y = expand_scale(c(0.2, 0.2)))
 ```
 
-Let's take as an example the DAG presented on my [last post](link) (presented on the left), along with an estimated DAG (on the right):
+Let's take as an example the DAG presented on my [last post](https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/) (presented on the left), along with an estimated DAG (on the right):
 
 ```{r}
 grid.arrange(p1, p2, nrow = 1)

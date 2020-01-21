@@ -40,7 +40,7 @@ comments: true
 <div id="edge-distance" class="section level2">
 <h2>Edge distance</h2>
 <p>A simple way to measure estimated DAG dissimilarity with the true DAG would be to count how many edges are present in the true DAG yet missing in the estimated DAG and conversely, how many edges are present in the estimated DAG yet do not exist in the true DAG.</p>
-<p>Let’s take as an example the DAG presented on my <a href="link">last post</a> (presented on the left), along with an estimated DAG (on the right):</p>
+<p>Let’s take as an example the DAG presented on my <a href="https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/">last post</a> (presented on the left), along with an estimated DAG (on the right):</p>
 <p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
 <p>We can see in the above example that in the estimated DAG there’s an edge <span class="math inline">\(gender \rightarrow ageGroup\)</span> which doesn’t exist in the true DAG, and that it’s missing the edge <span class="math inline">\(nativeBorn \rightarrow educ\)</span>. So the edge distance this case is 2.</p>
 </div>
