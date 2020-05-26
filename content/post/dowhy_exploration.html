@@ -40,16 +40,16 @@ df_r &lt;- py_to_r(data[[&quot;df&quot;]]) # to be used later</code></pre>
 <pre class="r"><code>data[&quot;df&quot;]$df$head() %&gt;% pandoc.table(split.tables = Inf)</code></pre>
 <table>
 <colgroup>
-<col width="10%" />
+<col width="11%" />
 <col width="5%" />
-<col width="9%" />
 <col width="10%" />
-<col width="10%" />
-<col width="10%" />
-<col width="10%" />
-<col width="10%" />
+<col width="11%" />
+<col width="11%" />
+<col width="11%" />
+<col width="11%" />
+<col width="11%" />
+<col width="7%" />
 <col width="8%" />
-<col width="9%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -67,64 +67,64 @@ df_r &lt;- py_to_r(data[[&quot;df&quot;]]) # to be used later</code></pre>
 </thead>
 <tbody>
 <tr class="odd">
-<td align="center">0.1236</td>
+<td align="center">0.4349</td>
 <td align="center">0</td>
-<td align="center">0.741</td>
-<td align="center">1.659</td>
-<td align="center">0.2614</td>
-<td align="center">-0.2472</td>
-<td align="center">0.1899</td>
-<td align="center">-0.6062</td>
+<td align="center">0.6183</td>
+<td align="center">-1.193</td>
+<td align="center">2.58</td>
+<td align="center">0.824</td>
+<td align="center">2.392</td>
+<td align="center">1.732</td>
 <td align="center">TRUE</td>
-<td align="center">18.24</td>
+<td align="center">23.05</td>
 </tr>
 <tr class="even">
-<td align="center">0.3468</td>
-<td align="center">0</td>
-<td align="center">0.5111</td>
-<td align="center">0.2102</td>
-<td align="center">-0.9326</td>
-<td align="center">0.3437</td>
-<td align="center">-0.9736</td>
-<td align="center">-0.8639</td>
+<td align="center">-0.9587</td>
+<td align="center">1</td>
+<td align="center">0.3943</td>
+<td align="center">0.3835</td>
+<td align="center">0.371</td>
+<td align="center">-1.838</td>
+<td align="center">1.835</td>
+<td align="center">1.867</td>
 <td align="center">TRUE</td>
-<td align="center">6.882</td>
+<td align="center">11.66</td>
 </tr>
 <tr class="odd">
-<td align="center">0.8701</td>
-<td align="center">0</td>
-<td align="center">0.3066</td>
-<td align="center">1.31</td>
-<td align="center">1.965</td>
-<td align="center">0.2338</td>
-<td align="center">-0.1431</td>
-<td align="center">-0.9677</td>
+<td align="center">-0.986</td>
+<td align="center">1</td>
+<td align="center">0.8709</td>
+<td align="center">-0.0708</td>
+<td align="center">-0.3716</td>
+<td align="center">-0.4343</td>
+<td align="center">0.2224</td>
+<td align="center">1.561</td>
 <td align="center">TRUE</td>
-<td align="center">22.94</td>
+<td align="center">9.258</td>
 </tr>
 <tr class="even">
-<td align="center">-0.2349</td>
+<td align="center">0.1813</td>
 <td align="center">0</td>
-<td align="center">0.2999</td>
-<td align="center">0.06766</td>
-<td align="center">0.7691</td>
-<td align="center">-1.175</td>
-<td align="center">-1.573</td>
-<td align="center">-1.966</td>
-<td align="center">FALSE</td>
-<td align="center">-4.887</td>
+<td align="center">0.2285</td>
+<td align="center">0.3961</td>
+<td align="center">0.1993</td>
+<td align="center">0.3843</td>
+<td align="center">-0.2072</td>
+<td align="center">-0.6096</td>
+<td align="center">TRUE</td>
+<td align="center">12.79</td>
 </tr>
 <tr class="odd">
-<td align="center">-0.045</td>
+<td align="center">-0.9915</td>
 <td align="center">0</td>
-<td align="center">0.4588</td>
-<td align="center">0.9863</td>
-<td align="center">-0.0372</td>
-<td align="center">-0.9543</td>
-<td align="center">-0.5231</td>
-<td align="center">-1.025</td>
-<td align="center">FALSE</td>
-<td align="center">1.24</td>
+<td align="center">0.4394</td>
+<td align="center">0.6585</td>
+<td align="center">-0.5755</td>
+<td align="center">0.2262</td>
+<td align="center">1.332</td>
+<td align="center">0.365</td>
+<td align="center">TRUE</td>
+<td align="center">15.58</td>
 </tr>
 </tbody>
 </table>
@@ -169,17 +169,17 @@ print(identified_estimand)</code></pre>
 ## Estimand name: backdoor
 ## Estimand expression:
 ##   d                                 
-## ─────(Expectation(y|W1,W0,W2,W4,W3))
+## ─────(Expectation(y|W3,W4,W1,W2,W0))
 ## d[v₀]                               
-## Estimand assumption 1, Unconfoundedness: If U→{v0} and U→y then P(y|v0,W1,W0,W2,W4,W3,U) = P(y|v0,W1,W0,W2,W4,W3)
+## Estimand assumption 1, Unconfoundedness: If U→{v0} and U→y then P(y|v0,W3,W4,W1,W2,W0,U) = P(y|v0,W3,W4,W1,W2,W0)
 ## ### Estimand : 2
 ## Estimand name: iv
 ## Estimand expression:
-## Expectation(Derivative(y, [Z0, Z1])*Derivative([v0], [Z0, Z1])**(-1))
-## Estimand assumption 1, As-if-random: If U→→y then ¬(U →→{Z0,Z1})
-## Estimand assumption 2, Exclusion: If we remove {Z0,Z1}→{v0}, then ¬({Z0,Z1}→y)</code></pre>
+## Expectation(Derivative(y, [Z1, Z0])*Derivative([v0], [Z1, Z0])**(-1))
+## Estimand assumption 1, As-if-random: If U→→y then ¬(U →→{Z1,Z0})
+## Estimand assumption 2, Exclusion: If we remove {Z1,Z0}→{v0}, then ¬({Z1,Z0}→y)</code></pre>
 <p>We can see that there are 2 possible ways of estimating the causal effect: Either using the backdoor criteria or with instrument variables (IV).</p>
-<p>We can really see how <em>dowhy</em> how does a great job at making causal discovery transparent and explicit in each step of the process.</p>
+<p>We can really see how <em>dowhy</em> does a great job at making causal discovery transparent and explicit in each step of the process.</p>
 </div>
 <div id="estimate-the-causal-effect" class="section level1">
 <h1>3) Estimate the causal effect</h1>
@@ -191,7 +191,7 @@ print(identified_estimand)</code></pre>
 )
 
 print(paste0(&quot;Causal Estimate is &quot;, causal_estimate$value))</code></pre>
-<pre><code>## [1] &quot;Causal Estimate is 14.5722987087289&quot;</code></pre>
+<pre><code>## [1] &quot;Causal Estimate is 9.64967493839487&quot;</code></pre>
 <p>Next, let’s try the backdoor estimand, using propensity score stratification:</p>
 <pre class="r"><code>causal_estimate &lt;- model$estimate_effect(
   identified_estimand = identified_estimand,
@@ -199,7 +199,7 @@ print(paste0(&quot;Causal Estimate is &quot;, causal_estimate$value))</code></pr
 )
 
 print(paste0(&quot;Causal Estimate is &quot;, causal_estimate$value))</code></pre>
-<pre><code>## [1] &quot;Causal Estimate is 10.2974994551257&quot;</code></pre>
+<pre><code>## [1] &quot;Causal Estimate is 10.1306174998784&quot;</code></pre>
 </div>
 <div id="validate-estimated-causal-effect" class="section level1">
 <h1>4) Validate estimated causal effect</h1>
@@ -213,8 +213,8 @@ print(paste0(&quot;Causal Estimate is &quot;, causal_estimate$value))</code></pr
 
 print(res_random)</code></pre>
 <pre><code>## Refute: Add a Random Common Cause
-## Estimated effect:(10.297499455125735,)
-## New effect:(10.329135890941698,)</code></pre>
+## Estimated effect:(10.130617499878428,)
+## New effect:(10.12114905599205,)</code></pre>
 <p>We can see the result is pretty stable. This means our sample size (10,000) is probably large enough to accommodate further confounders without loss of accuracy.</p>
 <p>Next, let’s see how adding an unobserved confounder can change our estimate. In the code below the <code>effect_strength_on_treatment</code> argument denotes the probability of the confounder flipping the treatment from 0 to 1 (or vice verca). The <code>effect_strength_on_outcome</code> denotes the linear coefficient of the confounder on the outcome.</p>
 <pre class="r"><code>res_unobserved &lt;- model$refute_estimate(
@@ -229,8 +229,8 @@ print(res_random)</code></pre>
 
 print(res_unobserved)</code></pre>
 <pre><code>## Refute: Add an Unobserved Common Cause
-## Estimated effect:(10.297499455125735,)
-## New effect:(9.992195972192327,)</code></pre>
+## Estimated effect:(10.130617499878428,)
+## New effect:(9.452502128579503,)</code></pre>
 <p>When using the effect strength values given in the example the effect on our estimate seems modest. Let’s try adding a stronger confounder:</p>
 <pre class="r"><code>res_unobserved &lt;- model$refute_estimate(
   estimand = identified_estimand,
@@ -244,8 +244,8 @@ print(res_unobserved)</code></pre>
 
 print(res_unobserved)</code></pre>
 <pre><code>## Refute: Add an Unobserved Common Cause
-## Estimated effect:(10.297499455125735,)
-## New effect:(7.065846279246412,)</code></pre>
+## Estimated effect:(10.130617499878428,)
+## New effect:(5.444774309294754,)</code></pre>
 <p>It’s pretty surprising to see how bad our estimate would be given a single un-observed confounder with what I’d consider mild confounding effect.</p>
 <p>What’s weirder is that the confounder can affect only the treatment (setting <code>effect_strength_on_outcome = 0</code>, essentially making it a non confounder) and still destabilize the estimate in pretty much the same way:</p>
 <pre class="r"><code>res_unobserved &lt;- model$refute_estimate(
@@ -260,8 +260,8 @@ print(res_unobserved)</code></pre>
 
 print(res_unobserved)</code></pre>
 <pre><code>## Refute: Add an Unobserved Common Cause
-## Estimated effect:(10.297499455125735,)
-## New effect:(6.821708758664067,)</code></pre>
+## Estimated effect:(10.130617499878428,)
+## New effect:(5.67025809685905,)</code></pre>
 <p>I’ll probably need to research the internal mechanics a bit more to understand how that’s possible.</p>
 <p>Let’s try permuting the treatment (making it effectively a placebo) and see how our estimate changes:</p>
 <pre class="r"><code>res_placebo &lt;- model$refute_estimate(
@@ -273,8 +273,8 @@ print(res_unobserved)</code></pre>
 
 print(res_placebo)</code></pre>
 <pre><code>## Refute: Use a Placebo Treatment
-## Estimated effect:(10.297499455125735,)
-## New effect:(0.1271016806333491,)</code></pre>
+## Estimated effect:(10.130617499878428,)
+## New effect:(0.1424237753920382,)</code></pre>
 <p>We can see that the estimated effect is essentially 0, which is what we’d like to see (this means our estimator doesn’t catch random noise as treatment effect).</p>
 <p>Finally, let’s see how sensitive is our estimate to removal of 10% of the observations:</p>
 <pre class="r"><code>res_subset &lt;- model$refute_estimate(
@@ -287,8 +287,8 @@ print(res_placebo)</code></pre>
 
 print(res_subset)</code></pre>
 <pre><code>## Refute: Use a subset of data
-## Estimated effect:(10.297499455125735,)
-## New effect:(10.333160141396403,)</code></pre>
+## Estimated effect:(10.130617499878428,)
+## New effect:(10.05344937871124,)</code></pre>
 <p>Pretty stable. Thinking about this a bit more I believe this is very similar to using bootstrap sampling to evaluate the estimate variability. Let’s implement bootstrap sampling for variability estimation just for fun:</p>
 <pre class="r"><code>if (!&quot;res.rds&quot; %in% list.files(&quot;../../../&quot;)) {
   set.seed(1)

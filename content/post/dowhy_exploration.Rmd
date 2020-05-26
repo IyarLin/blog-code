@@ -123,7 +123,7 @@ print(identified_estimand)
 
 We can see that there are 2 possible ways of estimating the causal effect: Either using the backdoor criteria or with instrument variables (IV).
 
-We can really see how *dowhy* how does a great job at making causal discovery transparent and explicit in each step of the process.
+We can really see how *dowhy* does a great job at making causal discovery transparent and explicit in each step of the process.
 
 # 3) Estimate the causal effect
 
