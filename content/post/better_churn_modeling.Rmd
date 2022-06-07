@@ -80,7 +80,8 @@ ggplot(lifelines_plot, aes(time, id, color = plan)) +
   geom_linerange(aes(xmin = xmin, xmax = xmax), size = 2) +
   theme(
     axis.ticks.y = element_blank(), axis.title.y = element_blank(),
-    axis.text.y = element_blank(), panel.grid.major = element_blank(),
+    axis.text.y = element_blank(), panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(), 
     panel.grid.minor.y = element_blank(),
     axis.text.x = element_text(angle = -45, vjust = 0),
     legend.key.size = unit(0.1, "npc"), legend.direction = "horizontal",
@@ -88,7 +89,8 @@ ggplot(lifelines_plot, aes(time, id, color = plan)) +
   ) +
   scale_y_continuous(expand = expansion(add = 2)) +
   geom_vline(xintercept = as.Date("2022-06-07"), lty = 2) +
-  scale_x_date(date_breaks = "1 months", date_labels = "%m-%y", name = "Month")
+  scale_x_date(date_breaks = "1 months", date_labels = "%m-%y", name = "Month") + 
+  annotate(x = as.Date("2022-07-01"), y = 9, geom = "text", label = "Today")
 ```
 
 The first subscriber on the top started on plan A on June 2021 and churned 
