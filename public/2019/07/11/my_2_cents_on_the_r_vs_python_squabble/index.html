@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>My 2 cents on the &#34;R vs Python&#34; squabble - Just be-cause</title>
+<meta property="og:title" content="My 2 cents on the &#34;R vs Python&#34; squabble - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">My 2 cents on the &#34;R vs Python&#34; squabble</h1>
+
+    
+    <span class="article-date">2019-07-11</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div class="figure">
+<img src="/post/my_2_cents_on_the_R_vs_Python_squabble_files/SaboriAv_Web.png" width="600" height="300" />
+
+</div>
+<div id="intro" class="section level1">
+<h1>Intro</h1>
+<p>In this post I’ll make an exception and instead of sharing my research I’ll chime in on the never ending “R vs Python” squabble.</p>
+<p>The tl;dr version is:</p>
+<ol style="list-style-type: decimal">
+<li>R is superior to Python for doing data science</li>
+<li>If you’re a newcomer to data science you should probably learn Python.</li>
+</ol>
+<p>OK, so “what is data science” is probably the title of even more posts than “R vs Python”. I’m going to circumvent that discussion by clarifying that throughout this post when I talk about data science I refer to generating value from data using machine learning, statistics and visualizations. Stuff like database setup and maintenance fall within the scope of data engineering, and things like web scraping for example are more akin to software development in my mind. Even image processing is considered by some non data science and many of the practitioners on that field go by the name “Algorithmicists”.</p>
+<p>I find R to be superior to Python for almost all data science tasks for 2 reasons:</p>
+<ol style="list-style-type: decimal">
+<li>Rstudio IDE</li>
+<li>tidyverse</li>
+</ol>
+<p>Unlike software development, data science processes usually involve fast and iterative phases of data exploration and transformation, hypothesis testing, model development etc. At each phase we have new ideas floating around which we’d like to explore and research as fast as possible in order to get to the next phase.</p>
+<p>In between our brain and his ideas and the data sits the IDE. The better an IDE is, the more work we can do in a given time frame, resulting in faster and more effective cycles as more brain resources are devoted to tackling the problem at hand rather trying to memorize what variables are currently in the working environment.</p>
+<p>Rstudio IDE bundles tons of features which may exist separately on several different IDEs for python, but never are they all bundled in the same IDE. For example the latest shout on the street is Jupyter notebooks. While they are useful when one wants to organize plots and code on the same document, they miss almost any other feature required in a decent IDE such as a console for interactive coding or a variable explorer. Spider/pyCharm include variable explorer, a console and a debugger but miss the utility of the Jupyter notebooks.</p>
+<p>Ratudios’ Rmarkdown files are like Jupyter notebooks on steroids that also include a console, variable explorer and many other useful features. All of these packed together make for a hugely productive working environment.</p>
+<p>The second huge boost to R is the tidyverse package collection. These cover almost all day to day data science tasks using a cohesive “philosophy” which means they do not only play together very nicely, but also once you get a handle of one of them you are in a good position to conquer the rest.</p>
+<p>One area where tidyverse shines especially is data munging - a set of tasks that many data scientists testify takes the majority of their time. Dplyr syntax is way more powerful, compact and readable than pandas which really looks like base R.</p>
+<p>Sure, there are use cases where Python is superior to R. One example would be advanced Deep Learning applications (and I’m saying advanced because the R Keras integration is beautiful and allows completing most deep learning tasks). Other use cases might include projects where a high level of integration within a production system is required. But my personal impression is these make the vast minority in terms of actual data scientists working on them compared with what I defined as data science.</p>
+<p>So why would I recommend aspiring data scientists to first master python? Simply because there’s more data scientists out there coding with Python (especially so in Israel) resulting in improved chances of lending successfully a first job in the industry.</p>
+<p>Why is it that Python is more popular even though it’s less effective at doing data science? My guess is it has to do with the rising popularity and hype around the data science profession which has drawn large crowds from technically oriented fields such as CS. These obviously feel more at home coding with a general programming language rather than a data science focused one.</p>
+<p>Another factor is that the cutting edge of data science in terms of technological development and salaries is Deep Learning, a field dominated by Python coders. So while most data scientists don’t actually utilize Deep Learning in their day to day jobs, many learn it in hopes of securing a position in that domain.</p>
+<p>The context at which I’m writing this post is my wonder as an avid R user at the surge of data scientists around me that either start their career with Python or make the transition from R. The growing dominance of Python gave me plenty of reasons to contemplate joining the trend myself.</p>
+<p>Given the above observations my decision is to stick with R whenever the project at hand allows it. Now granted, coding language should never make the difference when it comes to choosing a work place or projects. Python isn’t bad in itself (it’s just not as good as R) and mastering it shouldn’t be the challenging part of doing data science.</p>
+<p>To the more seasoned data scientists in the crowd who work mainly on those areas I defined as data science throughout this post I’ll say: if you haven’t already, give R and Rstudio a spin - you might find it greatly boosts your productivity.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+
+    
+  </body>
+</html>
+

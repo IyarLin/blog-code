@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>do-operator on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/do-operator/</link>
+    <description>Recent content in do-operator on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 13 Mar 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/do-operator/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>&#34;X affects Y&#34;. What does that even mean?</title>
+      <link>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</link>
+      <pubDate>Wed, 13 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</guid>
+      <description>On my last post I gave an intuitive demonstration of what’s causal inference and how it’s different than classic ML.
+After receiving some feedback I realize that while the post was easy to digest, some confusion remains. In this post I’ll delve a bit deeper into what the “causal” in Causal Inference actually means.
+Analyzing the effect of X on Y The field of Causal inference deals with the question of “How does X affect Y?</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>dtplyr on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/dtplyr/</link>
+    <description>Recent content in dtplyr on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 26 May 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/dtplyr/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>dtplyr speed benchmarks</title>
+      <link>https://iyarlin.github.io/2020/05/26/dtplyr_benchmarks/</link>
+      <pubDate>Tue, 26 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/05/26/dtplyr_benchmarks/</guid>
+      <description>R has many great tools for data wrangling. Two of those are the dplyr and data.table packages. When people wonder which one should they learn it is often argued that dplyr is considerably slower compared with data.table.
+Granted, data.table is blazing fast, but I personally find the syntax hard and un-intuitive and the speed difference doesn’t make much of a difference in most use cases I encountered.
+The only frequent scenario where I’ve experienced a significant performance gap is when doing operations over a very large number of groups.</description>
+    </item>
+    
+  </channel>
+</rss>

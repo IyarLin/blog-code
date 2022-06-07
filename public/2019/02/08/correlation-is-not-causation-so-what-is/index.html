@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>&#34;Correlation does not imply causation&#34;. So what does? - Just be-cause</title>
+<meta property="og:title" content="&#34;Correlation does not imply causation&#34;. So what does? - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">&#34;Correlation does not imply causation&#34;. So what does?</h1>
+
+    
+    <span class="article-date">2019-02-08</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div class="figure">
+<img src="https://imgs.xkcd.com/comics/correlation.png" width="600" height="300" />
+
+</div>
+<p>Machine learning applications have been growing in volume and scope rapidly over the last few years. What’s Causal inference, how is it different than plain good ole’ ML and when should you consider using it? In this post I try giving a short and concrete answer by using an example.</p>
+<div id="a-typical-data-science-task" class="section level1">
+<h1>A typical data science task</h1>
+<p>Imagine we’re tasked by the marketing team to find the effect of raising marketing spend on sales. We have at our disposal records of marketing spend (mkt), visits to our website (visits), sales, and competition index (comp).</p>
+<p>We’ll simulate a dataset using a set of equations (also called structural equations):</p>
+<span class="math display">\[\begin{equation}
+sales = \beta_1vists + \beta_2comp + \epsilon_1
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+vists = \beta_3mkt + \epsilon_2
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+mkt = \beta_4comp + \epsilon_3
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+comp = \epsilon_4
+\end{equation}\]</span>
+<p>with <span class="math inline">\(\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}\)</span></p>
+<p>All data presented in graphs or used to fit models below is simulated from the above equations.</p>
+<p>Below are the first few rows of the dataset:</p>
+<table style="width:46%;">
+<colgroup>
+<col width="11%" />
+<col width="12%" />
+<col width="11%" />
+<col width="11%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">mkt</th>
+<th align="center">visits</th>
+<th align="center">sales</th>
+<th align="center">comp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">282.5</td>
+<td align="center">2977</td>
+<td align="center">379</td>
+<td align="center">3.635</td>
+</tr>
+<tr class="even">
+<td align="center">338.8</td>
+<td align="center">3149</td>
+<td align="center">308</td>
+<td align="center">4.515</td>
+</tr>
+<tr class="odd">
+<td align="center">303.9</td>
+<td align="center">2485</td>
+<td align="center">369</td>
+<td align="center">3.092</td>
+</tr>
+<tr class="even">
+<td align="center">558.8</td>
+<td align="center">3117</td>
+<td align="center">191</td>
+<td align="center">5.22</td>
+</tr>
+<tr class="odd">
+<td align="center">334.4</td>
+<td align="center">4038</td>
+<td align="center">286</td>
+<td align="center">4.281</td>
+</tr>
+<tr class="even">
+<td align="center">297.7</td>
+<td align="center">2854</td>
+<td align="center">441</td>
+<td align="center">3.592</td>
+</tr>
+</tbody>
+</table>
+<p>Our goal is to predict the effect of raising marketing spend on sales which is 0.15 (from the set of equations above, using product decomposition we get <span class="math inline">\(\beta_1 \cdot \beta_3 = 0.3 \cdot 0.5 = 0.15\)</span>).</p>
+</div>
+<div id="common-analysis-approaches" class="section level1">
+<h1>Common analysis approaches</h1>
+<div id="first-approach-plot-bi-variate-relationship" class="section level2">
+<h2>First approach: plot bi-variate relationship</h2>
+<p>Many of us would start off by plotting a scatter plot of sales by marketing:</p>
+<p><img src="/post/2019-02-08-i-try-this_files/figure-html/plot%20scatter%20plot-1.png" width="672" /></p>
+<p>We can see that the relationship seen in the graph is actually the opposite of what we’d expected! It looks like increasing marketing actually decreases sales. Indeed, not only correlation isn’t causation, at times it can show a relation opposite to the true causation.</p>
+<p>Fitting a simple linear model <span class="math inline">\(sales = r_0 + r_1mkt + \epsilon\)</span> would yield the following coefficients: (note <span class="math inline">\(r\)</span> is a regression coefficient where’s <span class="math inline">\(\beta\)</span> is a true parameter in the structural equations)</p>
+<table style="width:32%;">
+<colgroup>
+<col width="19%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">(Intercept)</th>
+<th align="center">mkt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">513.5</td>
+<td align="center">-0.3976</td>
+</tr>
+</tbody>
+</table>
+<p>Confirming that we get a vastly different effect than the one we were looking for (0.15).</p>
+</div>
+<div id="second-approach-use-ml-model-with-all-available-features" class="section level2">
+<h2>Second approach: Use ML model with all available features</h2>
+<p>One might postulate that looking on a bi-variate relation amounts to using only 1 predictor variable, but if we were to use all of the available features we might be able to find a more accurate estimate.</p>
+<p>When running the regression <span class="math inline">\(sales = r_0 + r_1mkt + r_2visits + r_3comp + \epsilon\)</span> we get the following coefficients:</p>
+<table style="width:62%;">
+<colgroup>
+<col width="19%" />
+<col width="15%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">(Intercept)</th>
+<th align="center">mkt</th>
+<th align="center">visits</th>
+<th align="center">comp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">596.7</td>
+<td align="center">0.009642</td>
+<td align="center">0.02849</td>
+<td align="center">-90.06</td>
+</tr>
+</tbody>
+</table>
+<p>Now it looks like marketing spend has almost no effect at all! Since we simulated the data from a set of linear equations we know that using more sophisticated models (e.g. XGBoost, GAMs) can’t produce better results (I encourage the skeptic reader to try this out by re-running the <a href="https://github.com/IyarLin/blog-code/blob/master/content/post/2019-02-08-i-try-this.Rmd">Rmd script</a> used to produce this report).</p>
+</div>
+</div>
+<div id="maybe-we-should-consider-the-relation-between-features-too" class="section level1">
+<h1>Maybe we should consider the relation between features too…</h1>
+<p>Quite baffled by the results obtained so far we turn to consult the marketing team and we learn that in highly competitive markets the team would usually increase marketing spend (this is reflected in the coefficient <span class="math inline">\(\beta_4 = 0.6\)</span> above). So it’s possible that competition is a “confounding” factor: when we observe high marketing spend there’s also high competition thus leading to lower sales.</p>
+<p>Also, we notice that marketing probably affects visits to our site and those visits in turn affect sales.</p>
+<p>We can visualize these feature inter-dependencies with a directed a-cyclic graph (DAG):</p>
+<p><img src="/post/2019-02-08-i-try-this_files/figure-html/plot%20DAG-1.png" width="672" /></p>
+<p>So it would make sense to account for the confounding competition by adding it to our regression. Adding visits to our model however somehow “blocks” or “absorbs” the effect of marketing on sales so we should omit it from our model.</p>
+<p>Fitting the model <span class="math inline">\(sales = r_0 + r_1mkt + r_2comp + \epsilon\)</span> yields the coefficients below:</p>
+<table style="width:44%;">
+<colgroup>
+<col width="19%" />
+<col width="12%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">(Intercept)</th>
+<th align="center">mkt</th>
+<th align="center">comp</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">654.8</td>
+<td align="center">0.1494</td>
+<td align="center">-89.8</td>
+</tr>
+</tbody>
+</table>
+<p>Now we finally got the right effect estimate!</p>
+<p>The way we got there was a bit shaky though. We came up with general concepts such as “confounding” and “blocking” of features. Trying to apply these to datasets consisting of tens of variables with complicated relationships would probably prove tremendously hard.</p>
+</div>
+<div id="so-now-what-causal-inference" class="section level1">
+<h1>So now what? Causal inference!</h1>
+<p>So far we’ve seen that trying to estimate the effect of marketing spend on sales by examining bi-variate plots can fail bad. We’ve also seen that standard ML practices of throwing all available features into our model can fail too. It would seem we need to carefully construct the set of covariates included in our model in order to obtain the true effect.</p>
+<p>In causal inference this covariate set is also termed “adjustment set”. Given a model DAG we can utilize various algorithms that rely on rules very much like those mentioned above such as “confounding” and “blocking”, to find the correct adjustment set.</p>
+<div id="backdoor-criteria" class="section level2">
+<h2>Backdoor criteria</h2>
+<p>One of the most basic algorithms that can obtain the correct adjustment set is the “Backdoor-criteria” developed by J. Pearl. In a nutshell it seeks adjustment sets that block every “spurious” paths between our “exposure” variable (e.g. marketing) and “outcome” variable (e.g. sales) while keeping directed baths open.</p>
+<p>Consider for example the DAG below where we’re interested in finding the effect of x5 on x10:</p>
+<p><img src="/post/2019-02-08-i-try-this_files/figure-html/plot%20large%20DAG-1.png" width="672" /></p>
+<p>Using the backdoor-criterion (implemented in the R package “dagitty”) we can find the correct adjustment set:</p>
+<p><img src="/post/2019-02-08-i-try-this_files/figure-html/plot%20adjustemnt%20sets-1.png" width="672" /></p>
+</div>
+<div id="how-to-obtain-model-dags" class="section level2">
+<h2>How to obtain model DAGs?</h2>
+<p>Finding the model DAG can be admittedly challenging. It can be done using any combination of the following:</p>
+<ul>
+<li>Use domain knowledge<br />
+</li>
+<li>Given a few candidate model DAGs one can perform statistical tests to compare their fit to the data at hand<br />
+</li>
+<li>Use search algorithms (e.g. those implemented in the R “mgm” or “bnlearn” packages)</li>
+</ul>
+<p>I’ll touch upon this subject in more breadth in a future post.</p>
+</div>
+<div id="further-reading" class="section level2">
+<h2>Further reading</h2>
+<p>To anyone curious to learn a bit more about the questions I’ve tried to answer in this report I’ll recommend reading the light-weight Technical Report by Pearl: <a href="https://github.com/IyarLin/blog-code/blob/master/miscellaneous%20files/The%20Seven%20Pillars%20of%20Causal%20Reasoning%20with%20Reflections%20on%20Machine%20Learning%20Pearl%202018.pdf">The Seven Tools of Causal Inference with Reflections on Machine Learning</a></p>
+<p>For a more in-depth introduction to Causal inference and the DAG machinery I’d recommend getting Pearl’s short book: <a href="http://bayes.cs.ucla.edu/PRIMER/">Causal Inference in Statistics - A Primer</a></p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

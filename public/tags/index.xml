@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/</link>
+    <description>Recent content in Tags on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 07 Jun 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>churn</title>
+      <link>https://iyarlin.github.io/tags/churn/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/churn/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>methodology</title>
+      <link>https://iyarlin.github.io/tags/methodology/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/methodology/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>ML</title>
+      <link>https://iyarlin.github.io/tags/ml/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/ml/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>survival_analysis</title>
+      <link>https://iyarlin.github.io/tags/survival_analysis/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/survival_analysis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>R</title>
+      <link>https://iyarlin.github.io/tags/r/</link>
+      <pubDate>Sun, 23 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>coding</title>
+      <link>https://iyarlin.github.io/tags/coding/</link>
+      <pubDate>Sun, 02 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/coding/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>python</title>
+      <link>https://iyarlin.github.io/tags/python/</link>
+      <pubDate>Sun, 02 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/python/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>r-vs-python</title>
+      <link>https://iyarlin.github.io/tags/r-vs-python/</link>
+      <pubDate>Sun, 02 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/r-vs-python/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>apache-spark</title>
+      <link>https://iyarlin.github.io/tags/apache-spark/</link>
+      <pubDate>Tue, 09 Mar 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/apache-spark/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Big data</title>
+      <link>https://iyarlin.github.io/tags/big-data/</link>
+      <pubDate>Tue, 09 Mar 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/big-data/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>scala</title>
+      <link>https://iyarlin.github.io/tags/scala/</link>
+      <pubDate>Tue, 09 Mar 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/scala/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>benchmark</title>
+      <link>https://iyarlin.github.io/tags/benchmark/</link>
+      <pubDate>Tue, 26 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/benchmark/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>dtplyr</title>
+      <link>https://iyarlin.github.io/tags/dtplyr/</link>
+      <pubDate>Tue, 26 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/dtplyr/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>simulation</title>
+      <link>https://iyarlin.github.io/tags/simulation/</link>
+      <pubDate>Tue, 26 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/simulation/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>causal-inference</title>
+      <link>https://iyarlin.github.io/tags/causal-inference/</link>
+      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/causal-inference/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>DAG</title>
+      <link>https://iyarlin.github.io/tags/dag/</link>
+      <pubDate>Tue, 21 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/dag/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Algorithms</title>
+      <link>https://iyarlin.github.io/tags/algorithms/</link>
+      <pubDate>Mon, 20 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/algorithms/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>hands-on</title>
+      <link>https://iyarlin.github.io/tags/hands-on/</link>
+      <pubDate>Mon, 20 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/hands-on/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>do-operator</title>
+      <link>https://iyarlin.github.io/tags/do-operator/</link>
+      <pubDate>Wed, 13 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/do-operator/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>light-read</title>
+      <link>https://iyarlin.github.io/tags/light-read/</link>
+      <pubDate>Wed, 13 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/light-read/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>backdoor-criteria</title>
+      <link>https://iyarlin.github.io/tags/backdoor-criteria/</link>
+      <pubDate>Fri, 08 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/backdoor-criteria/</guid>
+      <description></description>
+    </item>
+    
+  </channel>
+</rss>

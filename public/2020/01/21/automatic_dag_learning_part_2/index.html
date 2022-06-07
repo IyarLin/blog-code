@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>Automatic DAG learning - part 2 - Just be-cause</title>
+<meta property="og:title" content="Automatic DAG learning - part 2 - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">Automatic DAG learning - part 2</h1>
+
+    
+    <span class="article-date">2020-01-21</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p><img src="/post/automatic_DAG_learning_part_2_files/orientDAGhex.png" /></p>
+<div id="intro" class="section level1">
+<h1>Intro</h1>
+<p>We’ve seen on a previous <a href="https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/">post</a> that one of the main differences between classic ML and Causal Inference is the additional step of using the correct adjustment set for the predictor features.</p>
+<p>In order to find the correct adjustment set we need a DAG that represents the relationships between all features relevant to our problem.</p>
+<p>One way of obtaining the DAG would be consulting domain experts. That however makes the process less accessible to wide audiences and more manual in nature. Learning the DAG from data automatically can thus make Causal Inference more streamlined usable.</p>
+<p>On my last <a href="https://iyarlin.github.io/2019/10/17/automatic_dag_learning_part_1/">blog post</a> we’ve hit a dead-end when it seemed non of the algorithms surveyed was able to learn the DAG accurately enough.</p>
+</div>
+<div id="enter-orientdag-package" class="section level1">
+<h1>Enter: orientDAG package</h1>
+<p>While the algorithms surveyed on my last post were able to converge on the correct DAG skeleton (find edge presence without it’s orientation) they all failed in orienting the edges correctly. This means that for a given pair of variables X,Y the algorithms were able to tell if they are causally linked, but unable to determine if X causes Y or vice versa.</p>
+<p>We can utilize literature centered around finding causal direction to correctly orient DAG edges after learning it’s skeleton.</p>
+<p>When both X and Y are continuous, we can use the generalized correlation measure developed by <a href="http://dx.doi.org/10.1080/03610918.2015.1122048">Vinod</a>.</p>
+<p>When both X and Y are discrete, we can use the distance correlation measure (see <a href="https://arxiv.org/pdf/1803.07712.pdf">Liu and Chan, 2016</a>).</p>
+<p>When either X or Y are discrete, and the other is continuous we can discretisize the continuous variable (using for example the procedure at <em>infotheo::discretize</em>) and use the method for 2 discrete variables mentioned above.</p>
+<p>The <a href="https://github.com/IyarLin/orientDAG">orientDAG</a> package uses the approach outlined above to orient DAG skeleton edges. To demonstrate how it works let’s go back to the example shown on my last post.</p>
+<p>We used the <a href="https://github.com/IyarLin/simMixedDAG">simMixedDAG</a> package to simulate datasets from the DAG below:</p>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>Following the bench-marking results on my last post we’ll restrict our attention to the <em>bnlearn::tabu</em> function for learning the DAG skeleton.</p>
+<p>The main function in the orientDAG is fittingly called <code>orient_dag</code>. It takes as input an adjacency matrix where a 1 in the i,j position denotes an arrow from node i to node j.</p>
+<p>Below we can see the adjacency matrix corresponding to the DAG above:</p>
+<pre><code>##            age ageGroup educ educGroup gender nativeBorn vocab year
+## age          0        0    0         1      0          1     0    0
+## ageGroup     0        0    0         0      0          0     0    0
+## educ         1        0    0         0      1          0     0    1
+## educGroup    0        0    0         0      0          0     0    0
+## gender       0        0    0         0      0          0     0    0
+## nativeBorn   0        1    0         0      0          0     1    0
+## vocab        0        0    0         0      1          0     0    1
+## year         0        0    0         0      0          0     0    0</code></pre>
+<p>The package also contains utility functions that facilitate DAG conversion between different representations. We can thus take the fitted <em>bn</em> DAG object from the <em>tabu</em> function and convert it to an adjacency matrix using the function <code>bn_to_adjmatrix</code>. The DAG below shows all conversions available in the package:</p>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>As before, we’ll measure DAG learning accuracy by the <a href="https://arxiv.org/abs/1306.1043">Structural Intervention Distance</a>. For every sample size <span class="math inline">\(n\)</span> I simulate 100 datasets and measure SID. Below I compare the SID distribution for 3 algorithms:</p>
+<ol style="list-style-type: decimal">
+<li><em>tabu</em>: DAGs obtained using the <em>tabu</em> function from the <em>bnlearn</em> package<br />
+</li>
+<li><em>tabu + orientDAG</em>: DAGs obtained by further orienting the DAG’s from <em>tabu</em> using the <em>orientDAG</em> package<br />
+</li>
+<li><em>random</em>: DAGs obtained by randomly re-orienting the DAGs obtained by the <em>tabu</em> function</li>
+</ol>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>We can see that the <em>tabu</em> performance deteriorates as sample size grows while <em>tabu + orientDAG</em> improves.</p>
+<p>From SID we can derive a more intuitive measure: The probability of finding the correct adjustment set for a randomly chosen pair of treatment-exposure variables:</p>
+<p><span class="math display">\[P(\text{correct adj set)} = 1 - \frac{SID}{\#\{\text{possible treatment - exposure pairs}\}}\]</span></p>
+<p>Below we can see the corresponding plot:</p>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>For <span class="math inline">\(n = 80,000\)</span> the <em>orientDAG</em> package about doubles the performance compared with <em>tabu</em>.</p>
+</div>
+<div id="bayesian-network-dgp" class="section level1">
+<h1>Bayesian Network DGP</h1>
+<p>In the above example the underlying data generating process (DGP) didn’t conform to the Bayesian Network (BN) assumptions, which might explain the deteriorating performance of the <em>tabu</em> function.</p>
+<p>Let’s see how the different algorithms fare when the underlying DGP does conform to the BN assumptions.</p>
+<p>Below I plot the “mehra” DAG taken from the bnlearn package:</p>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>The above DAG contains 24 nodes, of which 8 are categorical. The nodes are connected by 71 arrows.</p>
+<p>Below we can see SID for the different algorithms (this time running only 10 simulations per sample size due to the network size):</p>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>We can now see that when the BN assumptions hold the <em>tabu</em> function fares best as expected, while the <em>tabu + orientDAG</em> fares as bad as a random guess or even worse. It’s possible that the <em>tabu + orientDAG</em> performance is worse because it uses tests unrelated to the BN assumptions thus introducing noise to edges which are already oriented correctly by <em>tabu</em>.</p>
+<p>We can mitigate such performance deterioration by introducing regularization parameters which force <code>orient_dag</code> to re-orient an edge only in cases where there is strong evidence for a given orientation. Namely, the difference between distance correlation/generalized correlations must exceed some threshold. We’ll call this approach <em>tabu + orientDAG - conservative</em>.</p>
+<p>Below we can see the resulting performance measures:</p>
+<p><img src="/post/automatic_DAG_learning_part_2_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>While the <em>tabu + orientDAG</em> still fares worse then <em>tabu</em>, it still is able to marginally at least outperform a random guess.</p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>It would seem that automatic learning of DAGs is highly dependent on knowing the underlying DGP assumptions and also requires very large sample sizes - thus making automatic learning of DAGs unreliable (at least for the examples surveyed in this post).</p>
+<p>It may be that a hybrid solution where some edges are white-listed (their presence and orientation are assumed known) and some are blacklisted (are assumed to be known not to exist) by an expert, followed by an automatic algorithm can produce more reliable results.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

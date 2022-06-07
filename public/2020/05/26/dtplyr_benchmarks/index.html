@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>dtplyr speed benchmarks - Just be-cause</title>
+<meta property="og:title" content="dtplyr speed benchmarks - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">9 min read</span>
+    
+
+    <h1 class="article-title">dtplyr speed benchmarks</h1>
+
+    
+    <span class="article-date">2020-05-26</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p><img src="/post/tdplyr_benchmarking_files/race_cars.jpg" width="450" height="300" /></p>
+<p>R has many great tools for data wrangling. Two of those are the <em>dplyr</em> and <em>data.table</em> packages. When people wonder which one should they learn it is often argued that <em>dplyr</em> is considerably slower compared with <em>data.table</em>.</p>
+<p>Granted, <em>data.table</em> is blazing fast, but I personally find the syntax hard and un-intuitive and the speed difference doesn’t make much of a difference in most use cases I encountered.</p>
+<p>The only frequent scenario where I’ve experienced a significant performance gap is when doing operations over a very large number of groups. This can happen when for example working with customer data, where each row describes a touch point or transaction and one is interested with calculating the number of rows per customer, monetary value of all transactions per customer etc.</p>
+<p>Recently Rstudio <a href="https://www.tidyverse.org/blog/2019/11/dtplyr-1-0-0/">released</a> <em>dtplyr</em> package version 1.0.0 which provides a <em>data.table</em> backend for <em>dplyr</em>.</p>
+<p>Using <em>dtplyr</em> requires learning almost no additional code. One initiates a <em>data.table</em> sequence using the <code>lazy_dt</code> function, after which regular <em>dplyr</em> code is written. Execution of the code is done only when calling <code>as_tibble</code> (or <code>as.data.frame</code> etc).</p>
+<p>So for example a simple pipeline utilizing <em>dtplyr</em> for many group operations would look like:</p>
+<pre class="r"><code>mtcars %&gt;%
+  lazy_dt() %&gt;%
+  filter(wt &lt; 5) %&gt;%
+  mutate(l100k = 235.21 / mpg) %&gt;% # liters / 100 km
+  group_by(cyl) %&gt;%
+  summarise(l100k = mean(l100k))</code></pre>
+<pre><code>## Source: local data table [?? x 2]
+## Call:   `_DT1`[wt &lt; 5][, `:=`(l100k = 235.21/mpg)][, .(l100k = mean(l100k)), 
+##     keyby = .(cyl)]
+## 
+##     cyl l100k
+##   &lt;dbl&gt; &lt;dbl&gt;
+## 1     4  9.05
+## 2     6 12.0 
+## 3     8 14.9 
+## 
+## # Use as.data.table()/as.data.frame()/as_tibble() to access results</code></pre>
+<p>The only caveat is, as with all other <em>dbplyr</em> like interfaces, that some of the more complex operations might not be supported.</p>
+<p>Interestingly enough, I wasn’t able to find any bench-marking for <em>dtplyr</em> other than a walled piece on Medium. So I decided to go ahead and run a quick benchmark test myself.</p>
+<p>In this post I’ll check by how much does <em>dtplyr</em> improve on <em>dplyr</em> and whether it’s performance is close enough to <em>data.table</em> to be considered a valid alternative.</p>
+<p>To that end, I’ll reproduce some of the <a href="https://github.com/Rdatatable/data.table/wiki/Benchmarks-%3A-Grouping">benchmarking</a> done by data.table author Matt Dowle back at Dec 2018.</p>
+<p>The bench-marking consist of:</p>
+<ul>
+<li>5 simple queries: large groups and small groups on different columns of different types. Similar to what a data analyst might do in practice; i.e., various ad hoc aggregations as the data is explored and investigated.<br />
+</li>
+<li>Each package is tested separately in its own fresh session. To that end I’ve restarted my machine before running the benchmark code for every package.<br />
+</li>
+<li>Each query is repeated once more, immediately. This is to isolate cache effects and confirm the first timing. The first and second total elapsed times are plotted.</li>
+</ul>
+<p>My analysis will diverge from the original in the following respects:</p>
+<ol style="list-style-type: decimal">
+<li>I’ll compare <em>data.table</em>, <em>dtyplr</em> and <em>dplyr</em>. I’ll also check how starting a <em>dtplyr</em> pipe with a <code>data.table</code> rather than a <code>data.frame</code> affects performance (dubbed <em>dt_dtplyr</em> below)<br />
+</li>
+<li>I’ll use my personal laptop instead of spinning up a virtual machine<br />
+</li>
+<li>I’m generating a much smaller dataset (~4.9 Gb). I think that is representative of some of the larger datasets I’ve worked with in-memory (for larger datasets I usually switch to Spark).</li>
+</ol>
+<p>Other than that the code is mostly the same.</p>
+<details>
+<summary>data.table benchmark code</summary>
+<p>
+<pre class="r"><code>require(data.table)
+N &lt;- 1e8
+K &lt;- 100
+set.seed(1)
+DT &lt;- data.table(
+  id1 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE), # large groups (char)
+  id2 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE), # large groups (char)
+  id3 = sample(sprintf(&quot;id%010d&quot;, 1:(N / K)), N, TRUE), # small groups (char)
+  id4 = sample(K, N, TRUE), # large groups (int)
+  id5 = sample(K, N, TRUE), # large groups (int)
+  id6 = sample(N / K, N, TRUE), # small groups (int)
+  v1 = sample(5, N, TRUE), # int in range [1,5]
+  v2 = sample(5, N, TRUE), # int in range [1,5]
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE) # numeric e.g. 23.5749
+)
+
+q1a &lt;- system.time(DT[, sum(v1), keyby = id1])[3]
+q1b &lt;- system.time(DT[, sum(v1), keyby = id1])[3]
+q2a &lt;- system.time(DT[, sum(v1), keyby = &quot;id1,id2&quot;])[3]
+q2b &lt;- system.time(DT[, sum(v1), keyby = &quot;id1,id2&quot;])[3]
+q3a &lt;- system.time(DT[, list(sum(v1), mean(v3)), keyby = id3])[3]
+q3b &lt;- system.time(DT[, list(sum(v1), mean(v3)), keyby = id3])[3]
+q4a &lt;- system.time(DT[, lapply(.SD, mean), keyby = id4, .SDcols = 7:9])[3]
+q4b &lt;- system.time(DT[, lapply(.SD, mean), keyby = id4, .SDcols = 7:9])[3]
+q5a &lt;- system.time(DT[, lapply(.SD, sum), keyby = id6, .SDcols = 7:9])[3]
+q5b &lt;- system.time(DT[, lapply(.SD, sum), keyby = id6, .SDcols = 7:9])[3]
+data_table_results &lt;- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)</code></pre>
+</p>
+</details>
+<details>
+<summary>dtplyr benchmark code</summary>
+<p>
+<pre class="r"><code>require(dplyr)
+require(dtplyr)
+N &lt;- 1e8
+K &lt;- 100
+set.seed(1)
+DF &lt;- data.frame(
+  stringsAsFactors = FALSE,
+  id1 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE),
+  id2 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE),
+  id3 = sample(sprintf(&quot;id%010d&quot;, 1:(N / K)), N, TRUE),
+  id4 = sample(K, N, TRUE),
+  id5 = sample(K, N, TRUE),
+  id6 = sample(N / K, N, TRUE),
+  v1 = sample(5, N, TRUE),
+  v2 = sample(5, N, TRUE),
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE)
+)
+
+q1a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q1b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q2a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1, id2) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q2b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1, id2) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q3a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id3) %&gt;% summarise(sum(v1), mean(v3)) %&gt;% as_tibble())[3]
+q3b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id3) %&gt;%
+  summarise(sum(v1), mean(v3)) %&gt;% as_tibble())[3]
+q4a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id4) %&gt;%
+  summarise_at(vars(v1:v3), mean) %&gt;% as_tibble())[3]
+q4b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id4) %&gt;%
+  summarise_at(vars(v1:v3), mean) %&gt;% as_tibble())[3]
+q5a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id6) %&gt;%
+  summarise_at(vars(v1:v3), sum) %&gt;% as_tibble())[3]
+q5b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id6) %&gt;%
+  summarise_at(vars(v1:v3), sum) %&gt;% as_tibble())[3]
+
+dtplyr_results &lt;- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)</code></pre>
+</p>
+</details>
+<details>
+<summary>dt_dtplyr benchmark code</summary>
+<p>
+<pre class="r"><code>require(dplyr)
+require(dtplyr)
+library(data.table)
+N &lt;- 1e8
+K &lt;- 100
+set.seed(1)
+DF &lt;- data.frame(
+  stringsAsFactors = FALSE,
+  id1 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE),
+  id2 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE),
+  id3 = sample(sprintf(&quot;id%010d&quot;, 1:(N / K)), N, TRUE),
+  id4 = sample(K, N, TRUE),
+  id5 = sample(K, N, TRUE),
+  id6 = sample(N / K, N, TRUE),
+  v1 = sample(5, N, TRUE),
+  v2 = sample(5, N, TRUE),
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE)
+)
+
+DF &lt;- as.data.table(DF)
+
+q1a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q1b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q2a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1, id2) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q2b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id1, id2) %&gt;%
+  summarise(sum(v1)) %&gt;% as_tibble())[3]
+q3a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id3) %&gt;% summarise(sum(v1), mean(v3)) %&gt;% as_tibble())[3]
+q3b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id3) %&gt;%
+  summarise(sum(v1), mean(v3)) %&gt;% as_tibble())[3]
+q4a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id4) %&gt;%
+  summarise_at(vars(v1:v3), mean) %&gt;% as_tibble())[3]
+q4b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id4) %&gt;%
+  summarise_at(vars(v1:v3), mean) %&gt;% as_tibble())[3]
+q5a &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id6) %&gt;%
+  summarise_at(vars(v1:v3), sum) %&gt;% as_tibble())[3]
+q5b &lt;- system.time(DF %&gt;% lazy_dt() %&gt;% group_by(id6) %&gt;%
+  summarise_at(vars(v1:v3), sum) %&gt;% as_tibble())[3]
+
+dt_dtplyr_results &lt;- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)</code></pre>
+</p>
+</details>
+<details>
+<summary>dplyr benchmark code</summary>
+<p>
+<pre class="r"><code>library(dplyr)
+N &lt;- 1e8
+K &lt;- 100
+set.seed(1)
+DF &lt;- data.frame(
+  stringsAsFactors = FALSE,
+  id1 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE),
+  id2 = sample(sprintf(&quot;id%03d&quot;, 1:K), N, TRUE),
+  id3 = sample(sprintf(&quot;id%010d&quot;, 1:(N / K)), N, TRUE),
+  id4 = sample(K, N, TRUE),
+  id5 = sample(K, N, TRUE),
+  id6 = sample(N / K, N, TRUE),
+  v1 = sample(5, N, TRUE),
+  v2 = sample(5, N, TRUE),
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE)
+)
+
+q1a &lt;- system.time(DF %&gt;% group_by(id1) %&gt;% summarise(sum(v1)) %&gt;% as_tibble())[3]
+q1b &lt;- system.time(DF %&gt;% group_by(id1) %&gt;% summarise(sum(v1)) %&gt;% as_tibble())[3]
+q2a &lt;- system.time(DF %&gt;% group_by(id1, id2) %&gt;% summarise(sum(v1)) %&gt;% as_tibble())[3]
+q2b &lt;- system.time(DF %&gt;% group_by(id1, id2) %&gt;% summarise(sum(v1)) %&gt;% as_tibble())[3]
+q3a &lt;- system.time(DF %&gt;% group_by(id3) %&gt;% summarise(sum(v1), mean(v3)) %&gt;% as_tibble())[3]
+q3b &lt;- system.time(DF %&gt;% group_by(id3) %&gt;%
+  summarise(sum(v1), mean(v3)) %&gt;% as_tibble())[3]
+q4a &lt;- system.time(DF %&gt;% group_by(id4) %&gt;%
+  summarise_at(vars(v1:v3), mean) %&gt;% as_tibble())[3]
+q4b &lt;- system.time(DF %&gt;% group_by(id4) %&gt;%
+  summarise_at(vars(v1:v3), mean) %&gt;% as_tibble())[3]
+q5a &lt;- system.time(DF %&gt;% group_by(id6) %&gt;%
+  summarise_at(vars(v1:v3), sum) %&gt;% as_tibble())[3]
+q5b &lt;- system.time(DF %&gt;% group_by(id6) %&gt;%
+  summarise_at(vars(v1:v3), sum) %&gt;% as_tibble())[3]
+
+dplyr_results &lt;- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)</code></pre>
+</p>
+</details>
+<p><img src="/post/tdplyr_benchmarking_files/figure-html/unnamed-chunk-7-1.png" width="480" /></p>
+<p>We can see that using <em>dtplyr</em> improves the performance quite a bit, though still not as fast as <em>data.table</em>. It would seem however that most of the difference stems from the need to convert the <code>data.frame</code> object to a <code>data.table</code> one. That can be done once when reading in the file for example. Thus it would seem that ultimately the sacrifice in performance for the added benefit of tidy syntax (for those who dig tidy) isn’t too bad.</p>
+<p>Personally, I’m hooked on the tidyverse and the <em>dtplyr</em> package is just another reason to keep using it, even for operations over a large number of groups.</p>
+<div id="session-info" class="section level2">
+<h2>Session info</h2>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>## R version 3.6.2 (2019-12-12)
+## Platform: x86_64-apple-darwin15.6.0 (64-bit)
+## Running under: macOS Mojave 10.14.6
+## 
+## Matrix products: default
+## BLAS:   /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRblas.0.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/3.6/Resources/lib/libRlapack.dylib
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] data.table_1.12.8 pander_0.6.3      dtplyr_1.0.0      forcats_0.4.0    
+##  [5] stringr_1.4.0     dplyr_0.8.5       purrr_0.3.4       readr_1.3.1      
+##  [9] tidyr_1.0.3       tibble_3.0.1      ggplot2_3.3.0     tidyverse_1.3.0  
+## [13] pacman_0.5.1     
+## 
+## loaded via a namespace (and not attached):
+##  [1] tidyselect_1.1.0 xfun_0.12        haven_2.2.0      lattice_0.20-38 
+##  [5] colorspace_1.4-1 vctrs_0.3.0      generics_0.0.2   htmltools_0.4.0 
+##  [9] yaml_2.2.1       utf8_1.1.4       rlang_0.4.6      pillar_1.4.4    
+## [13] glue_1.4.1       withr_2.1.2      DBI_1.1.0        dbplyr_1.4.2    
+## [17] modelr_0.1.5     readxl_1.3.1     lifecycle_0.2.0  munsell_0.5.0   
+## [21] blogdown_0.17    gtable_0.3.0     cellranger_1.1.0 rvest_0.3.5     
+## [25] evaluate_0.14    labeling_0.3     knitr_1.27       fansi_0.4.1     
+## [29] broom_0.5.3      Rcpp_1.0.4.6     scales_1.1.0     backports_1.1.5 
+## [33] jsonlite_1.6.1   farver_2.0.3     fs_1.4.1         hms_0.5.3       
+## [37] digest_0.6.25    stringi_1.4.6    bookdown_0.17    grid_3.6.2      
+## [41] cli_2.0.2        tools_3.6.2      magrittr_1.5     crayon_1.3.4    
+## [45] pkgconfig_2.0.3  ellipsis_0.3.1   xml2_1.2.2       reprex_0.3.0    
+## [49] lubridate_1.7.8  assertthat_0.2.1 rmarkdown_2.0    httr_1.4.1      
+## [53] rstudioapi_0.11  R6_2.4.1         nlme_3.1-143     compiler_3.6.2</code></pre>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+
+    
+  </body>
+</html>
+

@@ -1,0 +1,436 @@
+---
+title: 'Causal inference bake off (Kaggle style!)'
+author: Iyar Lin
+date: '2019-05-20'
+slug: causal-inference-bake-off-kaggle-style
+categories:
+  - R
+tags: [causal-inference, R, ML, Algorithms, hands-on, simulation]
+comments: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that ever happend to me
+  "pander", # table rendering
+  "dagitty", # Create DAGs
+  "ggdag", # ggplot DAGs
+  "grf", # causal forests
+  "parallel", # detectCores and mclapply
+  "rpart", # decision trees,
+  "rpart.plot", # pretty plotting of rpart
+  "BART", # mc.wbart
+  "ranger", # random forests
+  "glmnet"
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+
+if (!require("bartCause")) pacman::p_load_gh("vdorie/bartCause")
+if (!require("aciccomp2017")) pacman::p_load_gh("vdorie/aciccomp/2017")
+```
+
+![](/post/causal-inference-bake-off-kaggle-style_files/target.jpg){width=600px height=300px}
+
+# Intro
+
+On my last [few](https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/) [posts](https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/) I've tried answering high level questions such as "What is Causal inference?", "How is it different than ML?" and "When should I use it?".
+
+In this post we finally get our hands dirty with some Kaggle style Causal Inference algorithms bake off! In this competition I'll pit some well known ML algorithms vs a few specialized Causal Inference (CI) algorithms and find out who's hot and who's not!
+
+# Causal Inference objectives and the need for specialized algorithms
+
+## ATE: Average Treatment Effect
+
+So far we've learned that in order to estimate the causal dependence of $Y$ on $X$ we need to use a set of features $Z_B$ that satisfies the "Backdoor criteria". We can then use the g-computation formula: 
+
+$$\mathbb{E}(Y|do(x)) = \sum_{z_B}f(x,z_B)P(z_B)$$
+
+where $Y$ is our target variable, $do(x)$ is the action of **setting** a treatment $X$ to a value $x$ (see my [previuos post](https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/) for more details on the do operator) and $f(x,z_B) = \hat{\mathbb{E}}(Y|x,z_B)$ is some predictor function we can obtain using regular ML algorithms. 
+
+One might ask: if we can obtain $f(x,z_B)$ using regular ML algorithms why the need for specialized CI algorithms? 
+
+The answer is that our objective in CI is different than our objective in classic ML: In ML we seek to predict the absolute value of Y given we observed $X$ take value $x$: $\mathbb{E}(Y|x)$, while in CI we try to estimate the difference in the expected value of $Y$ across different assignment values $x$ of $X$. In the CI literature this quantity is termed "Average Treatment Effect" or in short $ATE$. In the binary treatment case (where $X \in \{0, 1\}$) it's defined as:
+
+$$ATE := \mathbb{E}(Y|do(1)) -\mathbb{E}(Y|do(0))$$
+
+and in the general (not necessarily binary treatment) case it's defined as: 
+
+$$ATE(x) := \frac{\partial \, \mathbb{E}(Y|do(x))}{\partial \, x}$$
+
+To see why accurate estimation of $\mathbb{E}(Y|x)$ doesn't necessarily mean accurate estimation of the $ATE$ (and thus different objectives might require different algorithms) let's look at an example:
+
+Imagine we work for a company in the marketing industry. The treatment in this example is an automatic AI bidding robot we've developed recently as a value added service for our campaigns management platform. In order to demonstrate it works we sold it in a trial version for a few months, at the end of which we recorded for all our customers whether they took the trial ("treated") or not ("untreated"), average campaign ROI and company size ("small" or "large"):
+
+```{r example data, results = "asis"}
+data.frame(X=c("untreated", "treated", "untreated", "treated"), 
+           Z = c("small", "small", "large", "large"), 
+           Y = c("1%", "2%", "5%", "5%"), 
+           P_XZ = c(0.1, 0.4, 0.4, 0.1)
+           ) %>% 
+  pandoc.table(col.names = c("treatment", "company size", "ROI", "Proportion"), justify = "centre")
+```
+
+The first line reads "The average ROI for campaigns run by small companies who didn't use our robot (untreated) is 1%. The proportion of those campaigns of the entire campaigns run on our platform is 0.1.
+
+In order to use the g-computation formula we need to identify the correct adjustment set $Z_B$.
+
+After talking to some of our customers we learn that large companies usually employ large teams of analysts to optimize their campaigns, resulting in higher ROI compared with smaller companies. Having those large teams also means they have lower tendency to run our trial compared with small companies.
+
+We thus assume the following DAG:
+
+```{r plot dag}
+g <- dagitty("dag {
+ROI [outcome, pos=\"0,0\"]
+treatment [exposure, pos=\"2,0\"]
+comp_size [pos=\"1,1\"]
+treatment -> ROI
+comp_size -> treatment
+comp_size -> ROI
+}")
+
+tidy_dag <- tidy_dagitty(g)
+tidy_dag$data$name[1:2] <- "company \n size"
+tidy_dag$data$xend[1] <- 0.04; tidy_dag$data$yend[1] <- 0.04
+tidy_dag$data$xend[2] <- 1.96; tidy_dag$data$yend[2] <- 0.04
+tidy_dag$data$xend[3] <- 0.05
+ggdag(tidy_dag, node_size = rep(27, 3)) + theme_dag_blank()
+```
+
+Applying the "Backdoor criteria" to the DAG above we arrive at the insight that company size is a confounding factor and thus $Z_B = \text{company size}$. The g-computation formula reads in our case:
+
+\begin{equation}
+\mathbb{E}(\text{ROI}|do(\text{treatment})) = \\ 
+\sum_{\text{company size} \in \{\text{small,  large}\}}\mathbb{E}(\text{ROI}|\text{treatment, company size})P(\text{company size})
+\end{equation}
+
+We thus arrive at the quantities:
+
+$$\mathbb{E}(\text{ROI}|do(\text{treated})) = \\ 2\% \cdot (0.4 + 0.1) + 5\% \cdot (0.1 + 0.4) = 3.5\%$$
+
+and 
+
+$$\mathbb{E}(\text{ROI}|do(\text{untreated})) = \\ 1\% \cdot (0.4 + 0.1) + 5\% \cdot (0.1 + 0.4) = 3\%$$
+
+and finally 
+
+$$ATE = \mathbb{E}(\text{ROI}|do(\text{treated})) - \mathbb{E}(\text{ROI}|do(\text{untreated})) = 0.5\%$$
+
+Meaning the treatment (our robot) **increases** ROI by 0.5% on average. 
+
+Next, let's assume our data is noisy and the average ROI isn't enough to estimate the expected ROI. We try to estimate the ROI using 2 models. Below we can see the model predictions (with absolute error in parenthesis):
+
+```{r example data2, results = "asis"}
+data.frame(X=c("untreated", "treated", "untreated", "treated"), 
+           Z = c("small", "small", "large", "large"),  
+           P_XZ = c(0.1, 0.4, 0.4, 0.1), 
+           Y = c("1%", "2%", "5%", "5%"), 
+           Y_hat_1 = c("1.5% (0.5%)", "1.5% (0.5%)", "5.5% (0.5%)", "4.5% (0.5%)"), 
+           Y_hat_2 = c("0% (1%)", "1% (1%)", "4% (1%)", "4% (1%)")) %>% 
+  pandoc.table(col.names = c("treat", "comp size", "Prop", "ROI (true, unknown)", "ROI (model 1)", "ROI (model 2)"), split.tables = Inf, justify = "centre")
+```
+
+We can see that model 1 is more accurate than model 2 in every row.
+
+If we were to use model 1 to estimate the $ATE$ we'd get:
+
+$$\hat{\mathbb{E}}(\text{ROI}|do(\text{treated}))_{\text{mode1}} = \\ 1.5\% \cdot (0.4 + 0.1) + 4.5\% \cdot (0.1 + 0.4) = 3\%$$
+
+and 
+
+$$\hat{\mathbb{E}}(\text{ROI}|do(\text{untreated}))_{\text{mode1}} = \\ 1.5\% \cdot (0.4 + 0.1) + 5.5\% \cdot (0.1 + 0.4) = 3.5\%$$
+
+and finally
+
+$$\hat{ATE}_{\text{mode1}} = -0.5\%$$
+
+Meaning we estimate our product to **decreases** ROI by 0.5%! Our estimate is not only wrong in magnitude but also in sign, meaning we can't use it to market our product.
+
+If we were to use model 2 however we'd get:
+
+$$\hat{\mathbb{E}}(\text{ROI}|do(\text{treated}))_{\text{model2}} = \\ 1\% \cdot (0.4 + 0.1) + 4\% \cdot (0.1 + 0.4) = 2.5\%$$
+
+and 
+
+$$\hat{\mathbb{E}}(\text{ROI}|do(\text{untreated}))_{\text{model2}} = \\ 0\% \cdot (0.4 + 0.1) + 4\% \cdot (0.1 + 0.4) = 2\%$$
+
+and finally
+
+
+$$\hat{ATE}_{\text{model2}} = 0.5\%$$
+
+Arriving at the correct $ATE$ estimate! So even though model 2 is less accurate than model 1 in estimating $\mathbb{E}(\text{ROI})$, it's better in estimating the $ATE$.  
+
+## CATE: Conditional Average Treatment Effect
+
+Looking at the table above we see that while our product increases ROI by 0.5% **on average**, it increases ROI by 1% for campaigns run by small companies, while not improving at all those run by large ones. We'll be thus well advised to market our product to small companies.
+
+In the CI literature the treatment effect conditioned on some other features $z$ (such as company size) is fittingly termed "Conditional Average Treatment Effect" ($CATE$). In cases where the features conditioned on identify individuals uniquely (e.g. when at least one of the features conditioned on is continuous) it is also termed "Individual Treatment Effect", which is a highly sought after quantity in personalized medicine for example. For the binary case the $CATE$ is defined as:
+
+$$CATE(z) := \mathbb{E}(Y|do(1),z) - \mathbb{E}(Y|do(0),z)$$
+
+In the general (not necessarily binary treatment) case it's defined as: 
+
+$$CATE(x, z) := \frac{\partial \, \mathbb{E}(Y|do(X=x), Z=z)}{\partial \, x}$$
+
+Looking again at the model predictions above we can compare the actual vs predicted $CATE$ for both models (with absolute error in parentheses):
+
+```{r actual and predicted cate, results = "asis"}
+data.frame(Z = c("small", "large"),  
+           CATE = c("1%", "0%"), 
+           Y_hat_1 = c("0% (1%)", "-1% (1%)"), 
+           Y_hat_2 = c("1% (0%)", "0% (0%)")) %>% 
+  pandoc.table(col.names = c("comapny size", "CATE (true, unknown)", "CATE (model 1)", "CATE (model 2)"), split.tables = Inf, justify = "centre")
+```
+
+Again, we can see that while model 1 was more accurate than model 2 in predicting $\mathbb{E}(Y)$, it entirely misses the true $CATE$ while model 2 estimates it perfectly.
+
+To summarize: Specialized CI algorithms might be necessary because different objectives might require different tools.
+
+# An example with simulated data
+
+The example above might seem a bit ad hoc (which is true) but it is motivated by possibly real scenarios. I'll demonstrate by simulating a small (100 observations) dataset from the example problem presented above and fit to it a simple decision tree. Below is the resulting tree:
+
+```{r}
+set.seed(1)
+sample_sd <- 0.01
+group <- sample(x = c("untreated, small", "treated, small", "untreated, large", "treated, large"), replace = T, prob = c(0.1, 0.4, 0.4, 0.1), size = 100)
+ROI <- ifelse(group == "untreated, small", rnorm(n = sum(group == "untreated, small"), mean = 0.01, sd = sample_sd), 
+                     ifelse(group == "treated, small", rnorm(n = sum(group == "treated, small"), mean = 0.02, sd = sample_sd), 
+                            ifelse(group == "untreated, large", rnorm(n = sum(group == "untreated, large"), mean = 0.05, sd = sample_sd), 
+                                   rnorm(n = sum(group == "treated, large"), mean = 0.05, sd = sample_sd))))
+
+sim_data <- data.frame(treatment = factor(gsub(",.+", "", group), levels = c("untreated", "treated")), 
+                       company_size = factor(gsub(".+, ", "", group), levels = c("small", "large")), 
+                       ROI = ROI)
+
+tree_model <- rpart(ROI ~ ., data = sim_data)
+
+rpart.plot(tree_model)
+```
+
+We can see that the tree completely ignored the treatment! To see why that happened let's take a look at the dataset distribution:
+
+```{r}
+sim_data %>% ggplot(aes(x = company_size, y = ROI, color = treatment)) + 
+  geom_point(position = position_jitterdodge(dodge.width = 0.5)) + xlab("Company size") + 
+  theme(legend.position = "bottom", text = element_text(size = 30)) + scale_y_continuous(labels = function(breaks) paste0(round(breaks * 100), "%"))
+
+M <- 20 # number of simulations, printed later
+```
+
+We can see in the graph above 2 dataset features that could potentially throw off regular ML algorithms when in comes to CI tasks:
+
+1. The variability due to the treatment is very small compared with that of other features in the dataset leading to an underestimate of the treatment effect (In the graph the variability due to company size is much higher than that of the treatment, which is why the decision tree disregarded the treatment).  
+1. The distribution of features among the treatment groups is highly skewed (in the graph we can see the treated units make up the vast majority in the small companies and a small minority in the large companies, making the comparison within each company size unreliable and thus estimating the $CATE$ very hard).  
+
+In the showdown below we'll see if more powerful ML algorithms can still hold their own against algorithms designed specifically for CI tasks.
+
+# The competition setup
+
+It's now time to setup the problem for our competition!
+
+In this competition I'll use a semi-synthetic dataset generated for the "Atlantic Causal Inference Conference" Data Analysis Challenge. The "real data" part comprises of the feature set $Z$, which contains 58 measurements taken from the [Infant Health and Development Program](https://www.ncbi.nlm.nih.gov/pubmed/1371341). Those include features such as mother's age, endocrine condition, child's bilirubin etc. 
+
+Of the full feature set $Z$ only a subset of 8 features consists the correct adjustment set $Z_B$ while the rest are nuisance (meaning they do not affect the treatment nor the target variables). We assume the correct adjustment set $Z_B$ is unknown to the data scientist and thus the full feature set $Z$ is being fed to the model. This adds another layer of difficulty for our competitors to overcome.
+
+The target variable $Y$ (continuous) and the treatment variable $X$ (binary) are both simulated according to one of 12 Data Generating Processes (DGP). The DGPs differ by the following 2 traits:
+
+1. Measurement error/residual noise. One of: 
+    1. IID  
+    1. Group Correlated  
+    1. Heteroskedastic  
+    1. Non-additive (Non linear)  
+1. Estimation difficulty. One of: 
+    1. Easy  
+    1. Medium  
+    1. Hard
+
+Estimation difficulty relates to 3 factors which can be either low (0) or high (1):
+
+1. Magnitude: the magnitude of the treatment effect  
+1. Noise: signal to noise ratio  
+1. Confounding: The strength of confounding (how different is the distribution of $Z$ between treatment and control)  
+
+Below is a table showing the settings for those factors across the different difficulty scenarios:
+
+```{r difficulty tables, results = "asis"}
+difficulty_tab <- data.frame(magnitude = c(1, 1, 0), noise = c(0, 1, 1), confounding = c(0, 1, 1), 
+                             row.names = c("easy", "medium", "hard"))
+difficulty_tab %>% pandoc.table(justify = "centre")
+```
+
+Full details about the data generation process can be found [here](https://github.com/IyarLin/blog-code/blob/master/miscellaneous%20files/Atlantic%20Causal%20Inference%20Conference%20Data%20Analysis%20Challenge%202017.pdf). 
+
+From every $DGP$ I simulate $M =$ `r M` datasets and measure an algorithm $\: f$ performance using 2 measurements:
+
+The the first measurement looks at how well the $ATE$ is estimated across all $M =$ `r M` simulations: 
+
+$$RMSE_{ATE} = \sqrt{\sum_{m=1}^{M}\left(ATE - \hat{ATE}(m)\right)^2}$$
+
+We measure $RMSE_{ATE}$ once across all `r M` simulations.
+
+The second is a type of "explained variability" or R-squared for $CATE$: 
+
+$$R^{2}_{CATE} = 1 - \frac{var(CATE(z) - \hat{CATE}(z))}{var(CATE(z))}$$
+
+We measure $R^{2}_{CATE}$ once for every simulation $m$.
+
+## Wait, why use a synthetic dataset instead of a real one like in ML?
+
+In ML we can estimate our model $\: f$ out-of-sample error by using samples $\{y_i, f(x_i)\}$ (e.g. $\frac{1}{n}\sum_{i=1}^{n}(y_i-f(x_i))^2$). In CI however it's not that simple. When estimating the $CATE$ often times $z_i$ identifies a unit $i$ uniquely (e.g. if at least one of the features in $Z$ is continuous). Since a unit was either treated or untreated we only observe either $\{y_i,x_i=1,z_i\}$ or $\{y_i,x_i=0,z_i\}$. So unlike in ML, we can't benchmark our model using samples $\{y_i|x_i=1,z_i - y_i|x_i=0,z_i \quad, \quad f(1,z_i) - f(0,z_i)\}$.
+
+The situation I just alluded to is described in the CI literature many times in a problem setup commonly termed "counter factual inference".
+
+In the case of $ATE$ the problem is compounded by the fact it's a population parameter which means even if we knew the true $ATE$, we'd only have a single sample for a given dataset to benchmark against.
+
+For these reasons we need to use a synthetic/semi-synthetic dataset where we can simulate both $\{y_i,x_i=1,z_i\}$ and $\{y_i,x_i=0,z_i\}$.
+
+# The algorithms 
+
+And now, let's present our competitors!
+
+1. ER: Elastic Net Regression. In this implementation shrinkage is not applied to $X$ to prevent the algorithm from setting the coefficient for $X$ to 0. I also includes pairwise interaction terms between the treatment $X$ and all the features in $Z$ to enable $CATE$ estimation.
+1. RF: Random Forest. In this implementation $X$ is always added to the subset of features randomly selected in each tree node. Using default hyper-parameters.  
+1. BART: [Bayesian Additive Regression Trees](http://papers.nips.cc/paper/3084-bayesian-ensemble-learning.pdf). This algorithm has been demonstrated to have [good performance in Causal Inference tasks](https://doi.org/10.1198/jcgs.2010.08162). Using default parameters.  
+1. CF: [Causal Forest](https://arxiv.org/abs/1610.01271). A form of generalized Random Forests geared towards Causal Inference tasks. See also this [manual](https://github.com/grf-labs/grf/blob/master/REFERENCE.md). Using default parameters.    
+1. BARTC: [Baysian Additive Regression Trees - Causal version](https://github.com/vdorie/bartCause). This implementation uses [TMLE doubly robust estimation](https://biostats.bepress.com/ucbbiostat/paper252/).
+
+In this competition I compare out-of-the-box algorithms. For this reason XGBoost and neural nets are not among the competitors as they requires a lot of hyper parameter / architecture fine tuning. I also left out all methods that rely on modeling the assignment mechanism solely (e.g. propensity score re-weighting) as they are mainly geared towards estimation of the $ATE$.
+
+```{r calculate/load performance metrics}
+if(any(grepl("performance_metrics.rds", list.files("../../../", include.dirs = F)))){
+  load("../../../performance_metrics.rds")
+} else {
+  difficulties <- c("easy", "medium", "hard")
+  error_types <- c("iid", "group_corr", "heteroskedastic", "nonadditive") # in the paper it says heteroskedastic error weren't calculated correctly. Need to verify if that's still true before adding these to the analysis
+  algorithms <- c("ER", "RF", "BART", "CF", "BARTC")
+  
+  input_2017 <- input_2017 %>% 
+    rename_at(grep("x", names(.), value = T), funs(gsub("x", "z", .))) # rename the columns according to the terminology used in the blog post
+  
+  form <- as.formula(paste0("y ~ x -1 + ", paste0(names(input_2017), collapse = " + "), " + ", paste("x", names(input_2017), sep = ":", collapse = " + "))) # to be used later in the ER algorithm
+  
+  ncores <- detectCores()
+  perf <- expand.grid(algorithm = algorithms, difficulty = difficulties, error_type = error_types, simulation = 1:M) %>% 
+    mutate(R_sq_CATE = NA, ATE = NA, core = rep(seq(1, ncores - 1), length.out = n())) %>% split(f = .$core)
+  
+  return_perf_with_CATE_and_ATE <- function(df){
+    for(i in 1:nrow(df)){
+      sim_data <- bind_cols(
+        dgp_2017(parameters = data.frame(errors = df$error_type[i], 
+                                         magnitude = difficulty_tab$magnitude[rownames(difficulty_tab) == df$difficulty[i]], 
+                                         noise = difficulty_tab$noise[rownames(difficulty_tab) == df$difficulty[i]], 
+                                         confounding = difficulty_tab$confounding[rownames(difficulty_tab) == df$difficulty[i]]), 
+                                                random.seed = df$simulation[i]), input_2017) %>% 
+          rename(x = z, CATE = alpha) # rename according to terminology used in the post
+      
+      if (df$algorithm[i] == "ER"){
+        x <- model.matrix(object = form, data = sim_data)
+        penalty <- rep(1, ncol(x)); penalty[colnames(x) == "x"] <- 0 
+        ER <- cv.glmnet(x = x, y = sim_data$y, 
+                        penalty.factor = penalty, alpha = 0.8)
+        x_1 <- sim_data %>% mutate(x = 1)
+        x_1 <- model.matrix(object = form, data = x_1)
+        x_0 <- sim_data %>% mutate(x = 0)
+        x_0 <- model.matrix(object = form, data = x_0)
+        pred_1 <- predict(ER, x_1); pred_0 <- predict(ER, x_0)
+        df$R_sq_CATE[i] <- 1 - var(sim_data$CATE -  (pred_1 - pred_0))/var(sim_data$CATE)
+        df$ATE[i] <- mean(pred_1 - pred_0)
+      } else if (df$algorithm[i] == "RF") {
+        RF <- ranger(y ~ ., data = sim_data %>% select(-CATE), always.split.variables = "x")
+        pred_1 <- predict(RF, sim_data %>% mutate(x = 1))$predictions; pred_0 <- predict(RF, sim_data %>% mutate(x = 0))$predictions
+        df$R_sq_CATE[i] <- 1 - var(sim_data$CATE - (pred_1 - pred_0))/var(sim_data$CATE)
+        df$ATE[i] <- mean(pred_1 - pred_0)
+      } else if (df$algorithm[i] == "BART") {    
+        x <- model.matrix(~ . - CATE - y - 1, data = sim_data)
+        BART <- mc.wbart(x.train = x, y.train = sim_data$y)
+        x_1 <- x; x_1[, colnames(x_1) == "x"] <- 1
+        x_0 <- x; x_0[, colnames(x_0) == "x"] <- 0
+        pred_1 <- apply(predict(BART, x_1), 2, mean); pred_0 <- apply(predict(BART, x_0), 2, mean)
+        df$R_sq_CATE[i] <- 1 - var(sim_data$CATE - (pred_1 - pred_0))/var(sim_data$CATE)
+        df$ATE[i] <- mean(pred_1 - pred_0)
+      } else if (df$algorithm[i] == "CF") {
+        x <- model.matrix(object = ~ . - y - x - CATE - 1, data = sim_data)
+        CF <- causal_forest(X = x, Y = sim_data$y, W = sim_data$x, compute.oob.predictions = F)
+        df$R_sq_CATE[i] <- 1 - var(sim_data$CATE - unlist(predict(CF, x)))/var(sim_data$CATE)
+        df$ATE[i] <- average_treatment_effect(CF)[1]
+      } else if (df$algorithm[i] == "BARTC") {
+        BARTC <- bartc(response = sim_data$y, treatment = sim_data$x, confounders = sim_data %>% select(-c(y, x, CATE)), 
+                      method.rsp = "tmle", method.trt = "glm", estimand = "ate", verbose = F)
+        df$R_sq_CATE[i] <- 1 - var(sim_data$CATE - apply(extract(BARTC, "indiv.diff", combineChains = TRUE), 1, mean))/var(sim_data$CATE)
+        df$ATE[i] <- fitted(BARTC)
+      }
+    }
+    return(df)
+  }
+  
+  perf <- do.call("rbind", mclapply(X = perf, FUN = return_perf_with_CATE_and_ATE))
+  save.image("../../performance_metrics.rds")
+}
+```
+
+And now, without further ado, the results!
+
+## ATE
+
+Below I plot the estimated $ATE$ box-plots along with the true $ATE$ (dashed line). 
+
+```{r plot ATE perf}
+# calculate actual ATE
+ATE_real <- array(dim = c(length(error_types), length(difficulties)), dimnames = list(error_types, difficulties))
+for(l in 1:length(difficulties)){
+  for(k in 1:length(error_types)){
+    ATE_real[k,l] <- mean(dgp_2017(parameters = data.frame(errors = error_types[k], magnitude = difficulty_tab$magnitude[l], 
+                                                           noise = difficulty_tab$noise[l], confounding = difficulty_tab$confounding[l]), 
+                                   random.seed = 1)$alpha)
+  }
+}
+
+ATE_real_long <- ATE_real %>% as.data.frame() %>%  mutate(error_type = row.names(.)) %>% 
+  gather(key = "difficulty", value = "real ATE", easy:hard) %>% 
+  mutate(error_type = factor(error_type, levels = error_types), difficulty = factor(difficulty, levels = difficulties))
+
+perf <- perf %>% 
+  left_join(ATE_real_long, by = c("error_type", "difficulty"))
+
+perf %>% ggplot(aes(algorithm, ATE)) + geom_boxplot() + 
+  facet_grid(rows = vars(error_type), cols = vars(difficulty)) + 
+  geom_hline(data = ATE_real_long, aes(yintercept = `real ATE`), lty = 2) + xlab("Algorithm")
+```
+
+We can see that the error distribution doesn't change the picture much. For that reason $RMSE_{ATE}$ figures in the table below are averages over all error distributions:
+
+```{r ate rmse table, results = "asis"}
+perf %>% group_by(algorithm, difficulty) %>% summarise(rmse_ate = sqrt(mean(ATE - `real ATE`)^2)) %>% spread(difficulty, value = rmse_ate) %>% pandoc.table(justify = "centre", round = 3)
+```
+
+Next thing we can notice is that for the easy case all algorithms nail the $ATE$ with the exception of RF while for the harder cases they all undershoot by a wide margin with the exception of BARTC which comes pretty close. 
+
+## CATE
+
+Below I plot $R^{2}_{CATE}$ box-plots and a red line at 0. We note that while in ML we'd usually think of $R^{2} = 0$ as the baseline which is equal to "guessing" (since if we guess $\hat{y}_i = \bar{y} \: \forall \, i$ we get $R^{2} = 0$) that wouldn't be the case in CI. We note that $\bar{CATE} = ATE$, meaning in CI the equivalent of guessing $\hat{y}_i = \bar{y} \: \forall \, i$ is guessing $\hat{CATE}(z) = ATE \: \forall \, z$ and as we saw above that estimating the $ATE$ isn't always straight forward.
+
+```{r plot CATE perf}
+perf %>% filter(!(algorithm == "RF" & difficulty == "hard")) %>% 
+  ggplot(aes(algorithm, R_sq_CATE)) + geom_boxplot() + facet_grid(rows = vars(error_type), cols = vars(difficulty)) + geom_hline(yintercept = 0, color = "red") + ylab("R^2 CATE") + xlab("Algorithm")
+```
+
+Below I report the resulting average $\bar{R^{2}}_{CATE}$, averaging over all $M$ datasets and all error types:
+
+```{r r_sq_cate table, results = "asis"}
+perf %>% group_by(algorithm, difficulty) %>% summarise(r_sq_cate = mean(R_sq_CATE)) %>% spread(difficulty, value = r_sq_cate) %>% pandoc.table(justify = "centre", round = 2)
+```
+
+We can see that the causal inference oriented algorithms all fair better than the regular ML ones. We can further see that BART and BARTC do best, yet all struggle in the hard case.  
+
+# Final conclusion
+
+It would seem BART based algorithms are best suited for CI tasks among the competing algorithms. This is not entirely unexpected as it was [reported](https://doi.org/10.1198/jcgs.2010.08162) in the past that BART does well for CI tasks. It's also worth mentioning that the author of the package implementing BARTC is a member of the group that put together the dataset we used in this simulation study.
+
+Think you know an algorithm that can pinpoint the $CATE$ even in the hard case? You can write them in the comments below, or feel free to use the [code](https://github.com/IyarLin/blog-code/blob/master/content/post/causal-inference-bake-off-kaggle-style.Rmd) that produced this post to add them to the competition. 

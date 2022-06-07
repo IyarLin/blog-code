@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>Sometimes more data can hurt! - Just be-cause</title>
+<meta property="og:title" content="Sometimes more data can hurt! - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">4 min read</span>
+    
+
+    <h1 class="article-title">Sometimes more data can hurt!</h1>
+
+    
+    <span class="article-date">2021-05-23</span>
+    
+
+    <div class="article-content">
+      
+<script src="/rmarkdown-libs/header-attrs/header-attrs.js"></script>
+
+
+<p><img src="/post/sample_wise_double_descent_results_reproduction_files/ben-white-qDY9ahp0Mto-unsplash.jpg" width="600" height="400" /></p>
+<p>Photo by <a href="https://unsplash.com/@benwhitephotography?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Ben White</a> on <a href="https://unsplash.com/s/photos/wow?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText">Unsplash</a></p>
+<p>So here’s a mind blower: In some cases having more samples can actually reduce
+model performance. Don’t believe it? Neither did I! Read on to see how I demonstrate
+that phenomenon using a simulation study.</p>
+<div id="some-context" class="section level2">
+<h2>Some context</h2>
+<p>On a recent <a href="https://iyarlin.github.io/2021/03/09/sparse_matrix_representation_for_ml_in_scale/">blog post</a>
+I’ve discussed a scalable sparse linear regression model I’ve developed at work.
+One of it’s interesting properties is that it’s an interpolating model - meaning
+it has 0-training error. This is because it’s over parameterized and thus can fit
+the training data perfectly.</p>
+<p>While 0-training error is usually associated with over-fiting, the model seems to
+perform pretty well on the test set. Reports of hugely over-parameterized
+models that seem to not suffer from overfiting (especially in deep learning)
+have been accumulating in recent years and so the literature on subject.</p>
+<p>My own model for example performs best with no regularization at all. Intrigued
+by this extraordinary behavior I set out to better understand what’s going on. I
+got a good intro to the subject in this <a href="https://towardsdatascience.com/something-every-data-scientist-should-know-but-probably-doesnt-the-bias-variance-trade-off-25d97a17329d">Medium post</a>.</p>
+<p>Since Artificial neural networks are very complex algorithms it’s a good idea to
+study the subject and build intuition in a simpler setting. This is done in the
+great paper <a href="https://arxiv.org/pdf/1912.07242.pdf">“More Data Can Hurt for Linear Regression: Sample-wise Double Descent”</a>
+by Preetum Nakkiran.</p>
+<p>I’ll briefly summarize the problem setup: Let’s assume we have data that
+is generated from a linear model with 1000 covariates (without intercept). For
+every sample size <span class="math inline">\(n\)</span> we fit a linear regression and measure the MSE on a hold
+out test set.</p>
+<p>In cases where <span class="math inline">\(n \geq 1000\)</span> we fit a regular regression model. In cases
+where <span class="math inline">\(n&lt;1000\)</span> we have <span class="math inline">\(p&gt;n\)</span> and there’s no closed form solution since the
+inverse of the design matrix does not exist.</p>
+<p>The equation <span class="math inline">\(Y=X\beta\)</span> has infinite solutions in this case. Of those solutions,
+the solution which minimizes the coefficient L2 norm <span class="math inline">\(||\beta||_2^2\)</span> has the
+lowest variance and thus should have the best performance on the test set (more on
+that in Nakkiran’s paper). We can find the minimum norm L2 solution using the
+Moore-Penrose generalized inverse of a matrix X implemented in the MASS package.</p>
+<p>Below we can see the simulation results from the paper: we can see that
+somewhere around Num. Samples = 900 the test error actually blows up as the number
+of samples increases towards 1000:</p>
+<p><img src="/post/sample_wise_double_descent_results_reproduction_files/original_paper_plot.png" /></p>
+<p>I found that result a bit hard to believe! Worried this may be another case of
+<a href="https://en.wikipedia.org/wiki/Replication_crisis">replication crisis</a> I decided
+I had to see that for myself. Hence in this post I’ll reproduce the paper results.</p>
+</div>
+<div id="results-reproduction" class="section level2">
+<h2>Results reproduction</h2>
+<p>First we setup the simulation parameters:</p>
+<pre class="r"><code>beta &lt;- runif(1000) # real coefficients
+beta &lt;- beta/sqrt(sum(beta^2)) ## convert to a unit vector
+M &lt;- 50 ## number of simulations
+N &lt;- c(2, seq(100, 800, 100), seq(900, 990, 10), seq(991,1000,1), 
+       seq(1001, 1009, 1), seq(1010, 1100, 10), seq(1200, 2000, 100)) ## number of observations
+test_MSE &lt;- matrix(nrow = length(N), ncol = M)</code></pre>
+<p>Below we perform the actual simulation:</p>
+<pre class="r"><code>for (i in 1:length(N)){
+  for (m in 1:M){
+    print(paste0(&quot;n=&quot;, N[i], &quot;, m=&quot;, m))
+    # generate traininng data
+    X &lt;- replicate(1000, rnorm(N[i]))
+    e &lt;- rnorm(N[i], sd = 0.1)
+    y &lt;- X %*% beta + e
+    
+    if (N[i] &lt; 1000){
+      beta_hat &lt;- ginv(X) %*% y # Moore-penrose generalized matrix inverse
+    } else {
+      dat &lt;- as.data.frame(cbind(y, X))
+      names(dat)[1] &lt;- &quot;y&quot;
+      lm_model &lt;- lm(y ~ .-1, data = dat) # regular fit
+      beta_hat &lt;- matrix(lm_model$coefficients, ncol = 1)
+    }
+    
+    # generate test set
+    X_test &lt;- replicate(1000, rnorm(10000))
+    e_test &lt;- rnorm(10000, sd = 0.1)
+    y_test &lt;- X_test %*% beta + e_test
+    
+    # measure model accuracy
+    preds_test &lt;- X_test %*% beta_hat
+    test_MSE[i, m] &lt;- sqrt(mean((y_test - preds_test)^2))
+  }
+}</code></pre>
+<p>Let’s plot the results:</p>
+<pre class="r"><code>matplot(N, test_MSE, type = &quot;p&quot;, pch = &quot;.&quot;, ylim = c(0,5), 
+        xaxt = &quot;n&quot;, xlim = c(0,2000), ylab = &quot;Test MSE&quot;, xlab = &quot;Num. Samples&quot;)
+axis(1, at = seq(0,2000,250))
+lines(N, apply(test_MSE, 1, mean), col = &quot;red&quot;)</code></pre>
+<p><img src="/post/sample_wise_double_descent_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>Amazingly enough - we got the exact same results!</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

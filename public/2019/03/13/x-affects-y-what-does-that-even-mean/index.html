@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>&#34;X affects Y&#34;. What does that even mean? - Just be-cause</title>
+<meta property="og:title" content="&#34;X affects Y&#34;. What does that even mean? - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">8 min read</span>
+    
+
+    <h1 class="article-title">&#34;X affects Y&#34;. What does that even mean?</h1>
+
+    
+    <span class="article-date">2019-03-13</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div class="figure">
+<img src="/post/2019-03-13-x-affects-y-what-does-that-even-mean_files/jumbotron.jpg" />
+
+</div>
+<p>On my <a href="https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/">last post</a> I gave an intuitive demonstration of what’s causal inference and how it’s different than classic ML.</p>
+<p>After receiving some feedback I realize that while the post was easy to digest, some confusion remains. In this post I’ll delve a bit deeper into what the “causal” in Causal Inference actually means.</p>
+<div id="analyzing-the-effect-of-x-on-y" class="section level1">
+<h1>Analyzing the effect of X on Y</h1>
+<p>The field of Causal inference deals with the question of “How does X affect Y?”. While ML practices include procedures that can potentially shed light on the topic, they are generally not well suited to give a concise and correct answer. To see why that’s the case, let’s review how ML is usually used to answer the question “How does X affect Y?”</p>
+</div>
+<div id="partial-dependence-plots" class="section level1">
+<h1>Partial dependence plots</h1>
+<p>In classic ML we have some outcome variable <span class="math inline">\(Y\)</span> for which we’d like to predict the expected outcome given some observed feature set <span class="math inline">\(\{X,Z\}\)</span>:</p>
+<p><span class="math display">\[\mathbb{E}(Y|X=x, Z=z)\]</span></p>
+<p>where <span class="math inline">\(X\)</span> is a feature of special interest (for which we’ll ask “How does X affect Y?”) and <span class="math inline">\(Z\)</span> are all other measurable features.</p>
+<p>Using observations <span class="math inline">\(\{y_i,x_i,z_i\}, \, i = 1, \dots n\)</span> we construct a predictor function <span class="math inline">\(f(x,z) = \hat{\mathbb{E}}(Y|X=x,Z=z)\)</span>.</p>
+<p>When analyzing the marginal effect of a feature of interest <span class="math inline">\(X\)</span> on the outcome variable <span class="math inline">\(Y\)</span> the standard practice in ML would be to use partial dependence plots. The partial dependence function is defined as</p>
+<p><span class="math display">\[PD(x)=\mathbb{E}(Y|X=x)=\mathbb{E}_Z(f(x,Z))\]</span></p>
+<p>We can see that <span class="math inline">\(PD(x)\)</span> involves plugging <span class="math inline">\(x\)</span> to the prediction function <span class="math inline">\(f\)</span> and marginalizing over the values of the other features <span class="math inline">\(Z\)</span>.</p>
+<p><span class="math inline">\(PD(x)\)</span> is usually estimated by</p>
+<p><span class="math display">\[\hat{PD}(x) = \frac{1}{n}\sum_{i=1}^{n} f(x,z_i)\]</span></p>
+<p>Partial dependence plots (PDP) are then plotted with different values of <span class="math inline">\(X\)</span> in the x-axis and the corresponding <span class="math inline">\(PD(x)\)</span> on the y-axis.</p>
+<p>A common misconception is thinking that PDP shows how different values of <span class="math inline">\(X\)</span> <strong>affect</strong> <span class="math inline">\(Y\)</span>. For example <a href="https://christophm.github.io/interpretable-ml-book/pdp.html">Interpretable ML book</a> states: “The partial dependence plot (short PDP or PD plot) shows the marginal effect one or two features have on the predicted outcome of a machine learning model”.</p>
+<p>The <a href="https://www.kaggle.com/dansbecker/partial-dependence-plots">kaggle partial dependence plots page</a> states that PDP can answer questions such as “How much of wage differences between men and women are due solely to gender, as opposed to differences in education backgrounds or work experience?” or</p>
+<p>“Controlling for house characteristics, what impact do longitude and latitude have on home prices? To restate this, we want to understand how similarly sized houses would be priced in different areas, even if the homes actually at these sites are different sizes.”</p>
+<p>To demonstrate why this is a misconception let’s briefly revisit the toy model introduced on my <a href="https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/">last post</a>:</p>
+<p>Imagine we’re tasked by the marketing team to find the effect of raising marketing spend on sales. We have at our disposal records of marketing spend (mkt), visits to our website (visits), sales, and competition index (comp).</p>
+<p>We’ll simulate a dataset using a set of equations (also called structural equations):</p>
+<span class="math display">\[\begin{equation}
+sales = \beta_1visits + \beta_2comp + \epsilon_1
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+vists = \beta_3mkt + \epsilon_2
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+mkt = \beta_4comp + \epsilon_3
+\end{equation}\]</span>
+<span class="math display">\[\begin{equation}
+comp = \epsilon_4
+\end{equation}\]</span>
+<p>with <span class="math inline">\(\{\beta_1, \beta_2, \beta_3\, \beta_4\} = \{0.3, -0.9, 0.5, 0.6\}\)</span> and <span class="math inline">\(\epsilon_i \sim N(0,1)\)</span></p>
+<p>We can think of the equations above as some data generating process (DGP) underlying our simulated dataset. Let’s label that process <span class="math inline">\(DGP_{\text{obs}}\)</span> with “obs” standing for “observed”.</p>
+<p>Below I generate a sample <span class="math inline">\(\{sales_i, mkt_i, comp_i, visits_i\}, \, i \in 1, \dots, 10000\)</span> and fit a linear regression model <span class="math inline">\(sales = r_0 + r_1mkt + r_2visits + r_3comp + \epsilon\)</span> on the first 8000 observations.</p>
+<p>The <span class="math inline">\(PD\)</span> plot between mkt and sales is shown below:</p>
+<p><img src="/post/2019-03-13-x-affects-y-what-does-that-even-mean_files/figure-html/simulate%20DGP%20obs-1.png" width="672" /></p>
+<p>We can see that the line is essentially flat, indicating no effect, though in fact we know that the line slope should be 0.15 (since <span class="math inline">\(\beta_1 \cdot \beta_3=0.15\)</span>).</p>
+<p>This seems quite surprising (though those who read my <a href="https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/">last post</a> saw that result where the coefficient for mkt in the full ML model was around 0). The PDP shows none-sense results even though our model, while not perfect does capture a considerable degree of signal as shown in the plot of predicted vs actual sales (in the hold out test set of 2000 observations) below:</p>
+<p><img src="/post/2019-03-13-x-affects-y-what-does-that-even-mean_files/figure-html/ML%20model%20accuracy-1.png" width="672" /></p>
+</div>
+<div id="the-do-operator" class="section level1">
+<h1>The “do” operator</h1>
+<p>The reason why the relation found was so off is because the question “How does X affect Y” was so far ill defined and so were the tools we used to answer it.</p>
+<p>We need to make a distinction between when we observe a feature <span class="math inline">\(X\)</span> taking some specific value <span class="math inline">\(x\)</span> in which case we write <span class="math inline">\(X=x\)</span>, and when we “force” or set <span class="math inline">\(X\)</span> to some value <span class="math inline">\(x\)</span> in which case we write <span class="math inline">\(do(X=x)\)</span>.</p>
+<p>In order to understand the nature of the distinction between observing and setting <span class="math inline">\(X\)</span> (or <span class="math inline">\(X=x\)</span> vs <span class="math inline">\(do(X=x)\)</span>) we first need to understand that by setting <span class="math inline">\(do(X=x)\)</span> we change how future samples are generated. In our example setting <span class="math inline">\(do(mkt = x)\)</span> means we delete the 3rd equation above (<span class="math inline">\(mkt = \beta_4comp + \epsilon_3\)</span>) as mkt is no longer a function of comp. After setting mkt the rest of the variables are generated according to the remaining equations. We arrive at a new data generating process we’ll label <span class="math inline">\(DGP_{\text{do(mkt = x)}}\)</span> from which samples are generated after we set the mkt value.</p>
+<p>In the plot below I show the a scatter plot of mkt and sales generated by <span class="math inline">\(DGP_{\text{obs}}\)</span> on the left and those generated by <span class="math inline">\(DGP_{\text{do(mkt = x)}}\)</span> after setting mkt to different values on the right:</p>
+<p><img src="/post/2019-03-13-x-affects-y-what-does-that-even-mean_files/figure-html/sim%20DGP%20do-1.png" width="672" /></p>
+<p>We can see that the joint distribution of mkt and sales is dramatically different before and after setting mkt. When we observe <span class="math inline">\(mkt=x\)</span> (on the left pane) usually there’s also high competition leading to lower sales. When we set <span class="math inline">\(do(mkt=x)\)</span> (on the right pane) that is no longer the case and indeed sales increase with mkt as expected. Finding the causal effect in this case does not even require a very complex model: the line slope on the right pane is 0.15 (which is the true causal effect).</p>
+</div>
+<div id="the-challenge-with-causal-inference" class="section level1">
+<h1>The challenge with Causal inference</h1>
+<p>In causal inference we’re interested in predicting the expected outcome of <span class="math inline">\(Y\)</span> given we <strong>set</strong> <span class="math inline">\(X\)</span> to some value <span class="math inline">\(x\)</span> and we observed all other features <span class="math inline">\(Z\)</span> take values <span class="math inline">\(z\)</span>:</p>
+<p><span class="math display">\[\mathbb{E}(Y|do(X=x), Z=z)\]</span></p>
+<p>The corresponding causal effect of <span class="math inline">\(X\)</span> on <span class="math inline">\(Y\)</span> (defined very similarly to the PD function above) would then be:</p>
+<p><span class="math display">\[\mathbb{E}(Y|do(X=x))=\mathbb{E}_Z(Y|do(X=x),Z=z)\]</span></p>
+<p>The hard challenge involved with Causal inference stems from the fact that while <span class="math inline">\(\mathbb{E}(Y|do(X=x))\)</span> is generated under <span class="math inline">\(DGP_{\text{do(mkt = x)}}\)</span> we only have observations generated by <span class="math inline">\(DGP_{\text{obs}}\)</span>. That’s because the data generating process would change from <span class="math inline">\(DGP_{\text{obs}}\)</span> to <span class="math inline">\(DGP_{\text{do(mkt = x)}}\)</span> only after we set <span class="math inline">\(do(X=x)\)</span>. We need to make predictions on one distribution based on a different distribution. This is very much unlike classic ML where our training sample and outcome variable are both generated by the same distribution.</p>
+<p>A further complication that arises from this situation is that we never have ground truth to test our models against. Utilizing ground truth to let models “learn” on their own by trial and error is the corner stone of ML (e.g. using gradient descent to find model parameters).</p>
+<p>In ML we can always benchmark how accurate our model <span class="math inline">\(f(x,z)\)</span> is by fitting it to a train sample and measuring <span class="math inline">\(L(Y,f(X,Z))\)</span> in the test set (where <span class="math inline">\(L\)</span> is some loss function representing how far off our model predictions are from the ground truth). We can also benchmark our model to competing models <span class="math inline">\(f&#39;(x,z)\)</span> without requiring any knowledge about how those models were derived or how their internal machinery works as long as we can compute <span class="math inline">\(f&#39;(x,z)\)</span>.</p>
+</div>
+<div id="theres-still-hope" class="section level1">
+<h1>There’s still hope</h1>
+<p>While we don’t have observations generated by <span class="math inline">\(DGP_{\text{do(mkt = x)}}\)</span> there are still instances where we can un-biasedly estimate <span class="math inline">\(\mathbb{E}(Y|do(X=x))\)</span>.</p>
+<p>One of those instances happens when we are able to measure a set of variables <span class="math inline">\(Z_B \subset Z\)</span> that satisfies the “backdoor criteria” (also called “adjustment set”). Roughly this is the set of features that keeps all directed paths between our feature of interest <span class="math inline">\(X\)</span> and the outcome variable <span class="math inline">\(Y\)</span> open while blocking any “spurious” paths (See my <a href="https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/">last post</a> for more details on that).</p>
+<p>In the case where we can measure <span class="math inline">\(Z_B\)</span> we can use the g-computation formula:</p>
+<p><span class="math display">\[\mathbb{E}(Y|do(X=x)) = \sum_{z_B}f(x,z_B)P(z_B)\]</span> We note there’s no need to estimate <span class="math inline">\(P(z_b)\)</span>, we can just use samples <span class="math inline">\(\{y_i,x_i,{z_{B}}_i\}\)</span> to estimate:</p>
+<p><span class="math display">\[\mathbb{E}(Y|do(X=x)) = \frac{1}{n}\sum_{i=1}^{n} f(x,z_{B_i})\]</span></p>
+<p>Very much like the <span class="math inline">\(PD\)</span> function introduced earlier.</p>
+<p>In fact we’re back in the good ole’ ML scenario where we can use that shiny new XGBoost implementation and enjoy all the benefits of having ground truth mentioned above as long as we restrict ourselves to using the feature subset <span class="math inline">\(Z_B\)</span>.</p>
+</div>
+<div id="all-good-not-quite" class="section level1">
+<h1>All good? not quite</h1>
+<p>While using the adjustment set <span class="math inline">\(Z_B\)</span> let’s us use all the mighty good tools we have from ML, it entirely hinges on us constructing the correct data DAG (if you’re not sure what that is, see my <a href="https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/">last post</a>). Unfortunately that’s not easy to do nor validate.</p>
+<p>In future posts I’ll touch upon how to find the correct DAG as well as other complications that usually arise when trying to find causal relations.</p>
+</div>
+<div id="further-reading" class="section level1">
+<h1>Further reading</h1>
+<p>If you’re after some more light read on the connections between classic ML and Causal inference see the Technical Report by Pearl: <a href="https://github.com/IyarLin/blog-code/blob/master/miscellaneous%20files/The%20Seven%20Pillars%20of%20Causal%20Reasoning%20with%20Reflections%20on%20Machine%20Learning%20Pearl%202018.pdf">The Seven Tools of Causal Inference with Reflections on Machine Learning</a></p>
+<p>For a proof of equation 5 read chapter 3 of Pearls’ light intro to causal inference <a href="http://bayes.cs.ucla.edu/PRIMER/">Causal Inference in Statistics - A Primer</a>.</p>
+<p>You can find the script producing this report <a href="https://github.com/IyarLin/blog-code/blob/master/content/post/2019-03-13-x-affects-y-what-does-that-even-mean.Rmd">here</a></p>
+<p>I’d like to thank Sonia Vilenski-Lin, Yair Stark, Aviv Peled and Rithvik Mundra for providing feedback on this post drafts.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

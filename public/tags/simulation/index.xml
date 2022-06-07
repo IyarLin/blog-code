@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>simulation on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/simulation/</link>
+    <description>Recent content in simulation on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 26 May 2020 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/simulation/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>dtplyr speed benchmarks</title>
+      <link>https://iyarlin.github.io/2020/05/26/dtplyr_benchmarks/</link>
+      <pubDate>Tue, 26 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/05/26/dtplyr_benchmarks/</guid>
+      <description>R has many great tools for data wrangling. Two of those are the dplyr and data.table packages. When people wonder which one should they learn it is often argued that dplyr is considerably slower compared with data.table.
+Granted, data.table is blazing fast, but I personally find the syntax hard and un-intuitive and the speed difference doesn’t make much of a difference in most use cases I encountered.
+The only frequent scenario where I’ve experienced a significant performance gap is when doing operations over a very large number of groups.</description>
+    </item>
+    
+    <item>
+      <title>Automatic DAG learning - part 2</title>
+      <link>https://iyarlin.github.io/2020/01/21/automatic_dag_learning_part_2/</link>
+      <pubDate>Tue, 21 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/01/21/automatic_dag_learning_part_2/</guid>
+      <description>Intro We’ve seen on a previous post that one of the main differences between classic ML and Causal Inference is the additional step of using the correct adjustment set for the predictor features.
+In order to find the correct adjustment set we need a DAG that represents the relationships between all features relevant to our problem.
+One way of obtaining the DAG would be consulting domain experts. That however makes the process less accessible to wide audiences and more manual in nature.</description>
+    </item>
+    
+    <item>
+      <title>Automatic DAG learning - part 1</title>
+      <link>https://iyarlin.github.io/2019/10/17/automatic_dag_learning_part_1/</link>
+      <pubDate>Thu, 17 Oct 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/10/17/automatic_dag_learning_part_1/</guid>
+      <description>I was really struggling with finding a header pic for this post when I came across the one above - titled “Dag scoring and selection” and since it’s sort of the topic of this post I decided to use it!
+Intro On my second post I’ve stressed how important it is to use the correct adjustment set when trying to estimate a causal relationship between some treatment and exposure variables.</description>
+    </item>
+    
+    <item>
+      <title>&#34;Real life&#34; DAG simulation using the simMixedDAG package</title>
+      <link>https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/</link>
+      <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/</guid>
+      <description>Intro I’ve discussed on several blog posts how Causal Inference involves making inference about unobserved quantities and distributions (e.g. we never observe \(Y|do(x)\)). That means we can’t benchmark different algorithms on Causal Inference tasks (e.g \(ATE/CATE\) estimation) the same way we do in ML because we don’t have any ground truth to benchmark against.
+In the absence of ground truth, one of the main tools left for model comparison and performance bench-marking is simulation studies.</description>
+    </item>
+    
+    <item>
+      <title>Causal inference bake off (Kaggle style!)</title>
+      <link>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</link>
+      <pubDate>Mon, 20 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</guid>
+      <description>Intro On my last few posts I’ve tried answering high level questions such as “What is Causal inference?”, “How is it different than ML?” and “When should I use it?”.
+In this post we finally get our hands dirty with some Kaggle style Causal Inference algorithms bake off! In this competition I’ll pit some well known ML algorithms vs a few specialized Causal Inference (CI) algorithms and find out who’s hot and who’s not!</description>
+    </item>
+    
+  </channel>
+</rss>

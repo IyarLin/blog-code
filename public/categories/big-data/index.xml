@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Big data on Just be-cause</title>
+    <link>https://iyarlin.github.io/categories/big-data/</link>
+    <description>Recent content in Big data on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 09 Mar 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/categories/big-data/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>sparse matrix representation for ml in scale</title>
+      <link>https://iyarlin.github.io/2021/03/09/sparse_matrix_representation_for_ml_in_scale/</link>
+      <pubDate>Tue, 09 Mar 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2021/03/09/sparse_matrix_representation_for_ml_in_scale/</guid>
+      <description>Am I the only one seeing here a sparse linear regression? Hopefully by the end of this post you’ll see it too (:
+Its been a while since my last blog post as I’ve started working at SimilarWeb - A company that provides data on internet traffic for various use cases. During this time I’ve encountered an interesting ML problem setup that requires dealing with quite a few technical hurdles.</description>
+    </item>
+    
+  </channel>
+</rss>

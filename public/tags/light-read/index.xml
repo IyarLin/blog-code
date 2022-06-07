@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>light-read on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/light-read/</link>
+    <description>Recent content in light-read on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 13 Mar 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/light-read/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>&#34;X affects Y&#34;. What does that even mean?</title>
+      <link>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</link>
+      <pubDate>Wed, 13 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</guid>
+      <description>On my last post I gave an intuitive demonstration of what’s causal inference and how it’s different than classic ML.
+After receiving some feedback I realize that while the post was easy to digest, some confusion remains. In this post I’ll delve a bit deeper into what the “causal” in Causal Inference actually means.
+Analyzing the effect of X on Y The field of Causal inference deals with the question of “How does X affect Y?</description>
+    </item>
+    
+    <item>
+      <title>&#34;Correlation does not imply causation&#34;. So what does?</title>
+      <link>https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/</link>
+      <pubDate>Fri, 08 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/02/08/correlation-is-not-causation-so-what-is/</guid>
+      <description>Machine learning applications have been growing in volume and scope rapidly over the last few years. What’s Causal inference, how is it different than plain good ole’ ML and when should you consider using it? In this post I try giving a short and concrete answer by using an example.
+A typical data science task Imagine we’re tasked by the marketing team to find the effect of raising marketing spend on sales.</description>
+    </item>
+    
+  </channel>
+</rss>

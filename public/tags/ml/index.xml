@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ML on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/ml/</link>
+    <description>Recent content in ML on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 07 Jun 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/ml/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Better churn prediction</title>
+      <link>https://iyarlin.github.io/2022/06/07/better_churn_modeling/</link>
+      <pubDate>Tue, 07 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2022/06/07/better_churn_modeling/</guid>
+      <description>First off - I’m excited to share this blog has earned me a position as senior data scientist at Loops - a startup that builds an automated analytics platform for product and growth teams.
+One of it’s primary selling points is the application of advanced causal inference methodologies to uncover opportunities from observational data.
+This happened a little over a year ago and during that time I’ve been quite busy developing causal inference methodologies for real world applications.</description>
+    </item>
+    
+    <item>
+      <title>Sometimes more data can hurt!</title>
+      <link>https://iyarlin.github.io/2021/05/23/sample_wise_double_descent_results_reproduction/</link>
+      <pubDate>Sun, 23 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2021/05/23/sample_wise_double_descent_results_reproduction/</guid>
+      <description>Photo by Ben White on Unsplash
+So here’s a mind blower: In some cases having more samples can actually reduce model performance. Don’t believe it? Neither did I! Read on to see how I demonstrate that phenomenon using a simulation study.
+Some context On a recent blog post I’ve discussed a scalable sparse linear regression model I’ve developed at work. One of it’s interesting properties is that it’s an interpolating model - meaning it has 0-training error.</description>
+    </item>
+    
+    <item>
+      <title>Causal inference bake off (Kaggle style!)</title>
+      <link>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</link>
+      <pubDate>Mon, 20 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</guid>
+      <description>Intro On my last few posts I’ve tried answering high level questions such as “What is Causal inference?”, “How is it different than ML?” and “When should I use it?”.
+In this post we finally get our hands dirty with some Kaggle style Causal Inference algorithms bake off! In this competition I’ll pit some well known ML algorithms vs a few specialized Causal Inference (CI) algorithms and find out who’s hot and who’s not!</description>
+    </item>
+    
+    <item>
+      <title>&#34;X affects Y&#34;. What does that even mean?</title>
+      <link>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</link>
+      <pubDate>Wed, 13 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</guid>
+      <description>On my last post I gave an intuitive demonstration of what’s causal inference and how it’s different than classic ML.
+After receiving some feedback I realize that while the post was easy to digest, some confusion remains. In this post I’ll delve a bit deeper into what the “causal” in Causal Inference actually means.
+Analyzing the effect of X on Y The field of Causal inference deals with the question of “How does X affect Y?</description>
+    </item>
+    
+  </channel>
+</rss>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>hands-on on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/hands-on/</link>
+    <description>Recent content in hands-on on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 20 May 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/hands-on/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Causal inference bake off (Kaggle style!)</title>
+      <link>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</link>
+      <pubDate>Mon, 20 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</guid>
+      <description>Intro On my last few posts I’ve tried answering high level questions such as “What is Causal inference?”, “How is it different than ML?” and “When should I use it?”.
+In this post we finally get our hands dirty with some Kaggle style Causal Inference algorithms bake off! In this competition I’ll pit some well known ML algorithms vs a few specialized Causal Inference (CI) algorithms and find out who’s hot and who’s not!</description>
+    </item>
+    
+  </channel>
+</rss>

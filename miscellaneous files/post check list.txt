@@ -1,0 +1,7 @@
+Spell check. 
+styler
+Correct date. serv
+Make sure all links work. 
+Commit and push the blog code (public dir). 
+Commit and push blog dir.
+Publish on linkedIn and Medium.  

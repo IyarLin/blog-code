@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>sparse matrix representation for ml in scale - Just be-cause</title>
+<meta property="og:title" content="sparse matrix representation for ml in scale - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">6 min read</span>
+    
+
+    <h1 class="article-title">sparse matrix representation for ml in scale</h1>
+
+    
+    <span class="article-date">2021-03-09</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p><img src="/post/sparse_matrix_representation_for_ml_in_scale_files/Andromeda_Galaxy_560mm_FL.jpeg" width="600" height="400" /></p>
+<p>Am I the only one seeing here a sparse linear regression? Hopefully by the end
+of this post you’ll see it too (:</p>
+<p>Its been a while since my last blog post as I’ve started working at
+<a href="https://www.similarweb.com/">SimilarWeb</a> - A
+company that provides data on internet traffic for various use cases. During
+this time I’ve encountered an interesting ML problem setup that requires
+dealing with quite a few technical hurdles. In this blog post I’d like to share
+the problem and Scala spark recipe code to tackle it at scale.</p>
+<div id="some-motivation" class="section level2">
+<h2>Some motivation</h2>
+<p>Since I can’t really divulge the specifics of the problem I’m working on I’ll
+illustrate the problem setup with a (possibly) imaginary scenario.</p>
+<p>Let’s imagine we’re working for a credit card company. We issue credit cards to
+consumers who go and spend money at different businesses. Knowing the monthly
+revenue those business generate can be instrumental for pricing and marketing
+purposes.</p>
+<p>To try and estimate business monthly revenue we asked a
+small subset of the businesses to disclose their last month
+revenue. We’ll denote the last month revenue for business <span class="math inline">\(i\)</span> by <span class="math inline">\(y_i\)</span>.</p>
+<p>Next, we have at our disposal purchase information from our credit card holders.
+Let’s denote the total money spent by customer <span class="math inline">\(j\)</span> at business <span class="math inline">\(i\)</span> by <span class="math inline">\(x_{ij}\)</span>.</p>
+<p>We can assume that the total purchases by our credit card holders at a given
+business <span class="math inline">\(i\)</span>: <span class="math inline">\(x_i=\Sigma x_{ij}\)</span> represents only a fraction of the total revenue
+<span class="math inline">\(y_i\)</span>. We can thus assume that there’s some inflation factor <span class="math inline">\(\beta\)</span> such that:</p>
+<p><span class="math display">\[y_i = x_i \beta + \epsilon_i\]</span></p>
+<p>Estimation of <span class="math inline">\(\beta\)</span> would amount to a simple regression. We can then use the
+model to estimate monthly revenue for all the other businesses where our card
+holders are spending money.</p>
+<p>Taking the above idea one step further, we can imagine that different card
+holders might represent very different purchasing patterns, which could
+necessitate different inflation factor <span class="math inline">\(\beta_j\)</span> for every consumer <span class="math inline">\(j\)</span>.
+This would amount to assuming that:</p>
+<p><span class="math display">\[y_i = \Sigma x_{ij}\beta_j + \epsilon_i\]</span>
+and in matrix notation:</p>
+<p><span class="math display">\[Y=X\beta + \epsilon\]</span>
+Estimation of the above equation might seem like a simple regression but in
+practice it introduces several challenges:</p>
+<ol style="list-style-type: decimal">
+<li><span class="math inline">\(X\)</span> is usually very large. It would span as many rows as we have businesses
+in our sample and as many columns as the number of credit card holders. In my
+application I had 70K rows on 1.8M columns (which roughly translates to 470 GB
+assuming we encode the matrix entries as integer).<br />
+</li>
+<li><span class="math inline">\(X\)</span> can have many more columns than it has rows. This kind of matrix is
+<a href="https://en.wikipedia.org/wiki/Rank_(linear_algebra)#:~:text=%20A%20matrix%20is%20said%20to%20be%20rank%2Deficient%20if%20it,given%20by%20mult%20iplication%20by%20A.">rank defiecient</a> which in practice means we can’t calculate the closed
+form solution (there’s actually infinite solutions).</li>
+</ol>
+</div>
+<div id="sparse-linear-regression-in-scala-spark" class="section level2">
+<h2>Sparse linear regression in scala spark</h2>
+<p>Luckily enough Spark Scala has all the tools needed to tackle the above problem
+at scale!</p>
+<p>First, we note that while <span class="math inline">\(X\)</span> is pretty huge, it’s also usually very sparse. In
+my application it had the value 0 in 99.95% of it’s entries. That means we can use sparse
+matrix representation to avoid blowing up our memory.</p>
+<p>Next, we discover that the spark ml linear regression implementation can fit
+the model using gradient descent rather than using the closed form solution.
+This means we can solve the above optimization problem and arrive at one (of
+infinite) solutions to the equation.</p>
+</div>
+<div id="code-receipe" class="section level2">
+<h2>Code receipe</h2>
+<p>Note: The below assumes spark 3.0+</p>
+<p>A reasonable place to start our code example is to assume we have some
+transnational DataFrame <em>user_df</em> for a given month with the following schema:</p>
+<ol style="list-style-type: decimal">
+<li>user_id: StringType<br />
+</li>
+<li>business_id: IntegerType</li>
+<li>amount_spent: DoubleType</li>
+</ol>
+<pre class="r"><code>import spark.implicits._
+
+val user_df = Seq(
+  (&quot;ad3a&quot;, 1, 14.0), 
+  (&quot;ad3a&quot;, 0, 13.0), 
+  (&quot;3Gd2e&quot;, 1, 11.0)
+).toDF(&quot;user_id&quot;, &quot;business_id&quot;, &quot;amount_spent&quot;)
+
+user_df.show()</code></pre>
+<pre><code>## 
+## +-------+-----------+------------+
+## |user_id|business_id|amount_spent|
+## +-------+-----------+------------+
+## |   ad3a|          1|        14.0|
+## |   ad3a|          0|        13.0|
+## |  3Gd2e|          1|        11.0|
+## +-------+-----------+------------+
+## </code></pre>
+<p>We also have a DataFrame containing a sample of businesses total revenues
+<em>biz_df</em>:</p>
+<ol style="list-style-type: decimal">
+<li>business_id: IntegerType<br />
+</li>
+<li>total_revenue: FloatType</li>
+</ol>
+<pre class="r"><code>val biz_df = Seq(
+  (0, 13.9), 
+  (1, 36.7)
+).toDF(&quot;business_id&quot;, &quot;total_revenue&quot;)
+
+biz_df.show()</code></pre>
+<pre><code>## 
+## +-----------+-------------+
+## |business_id|total_revenue|
+## +-----------+-------------+
+## |          0|         13.9|
+## |          1|         36.7|
+## +-----------+-------------+
+## </code></pre>
+<p>Let’s start with some preprocesssing in the <em>user_df</em> DataFrame. First, we need
+to convert <em>user_id</em>s to column index in the <span class="math inline">\(X\)</span> matrix. This means every user
+needs to have an integer denoting the matrix column index that represents his
+spending. Spark has a great utility that can serve that purpose: <em>StringIndexer</em></p>
+<pre class="r"><code>import org.apache.spark.ml.feature.StringIndexer
+val stringIndexer = new StringIndexer()
+.setInputCol(&quot;user_id&quot;)
+.setOutputCol(&quot;userIndex&quot;)
+
+val stringIndexerModel = stringIndexer.fit(user_df)
+
+user_df = stringIndexerModel
+.transform(user_df)
+.withColumn(&quot;userIndex&quot;, $&quot;userIndex&quot;.cast(&quot;Int&quot;))
+
+user_df.show()</code></pre>
+<pre><code>## 
+## +-------+-----------+------------+---------+
+## |user_id|business_id|amount_spent|userIndex|
+## +-------+-----------+------------+---------+
+## |   ad3a|          1|        14.0|        0|
+## |   ad3a|          0|        13.0|        0|
+## |  3Gd2e|          1|        11.0|        1|
+## +-------+-----------+------------+---------+
+## </code></pre>
+<p>Next, we’ll collect for every business the users who spent money with them and
+the corresponding amounts. In the below code we’ll also join in the business total revenue too:</p>
+<pre class="r"><code>import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.functions._
+val sortUdf: UserDefinedFunction = udf((rows: Seq[Row]) =&gt; {
+  rows.map { case Row(userIndex: Int, amount_spent: Double) =&gt; (userIndex, amount_spent) }
+    .sortBy { case (userIndex, amount_spent) =&gt; userIndex }
+})
+
+
+val user_business_amount_spent_df = user_df
+.groupBy(&quot;business_id&quot;)
+.agg(collect_list(struct(&quot;userIndex&quot;, &quot;amount_spent&quot;)).alias(&quot;user_amount_spent_list&quot;))
+.select($&quot;business_id&quot;, sortUdf($&quot;user_amount_spent_list&quot;).alias(&quot;user_amount_spent_list&quot;))
+.withColumn(&quot;userIndex_list&quot;, $&quot;user_amount_spent_list&quot;.getField(&quot;_1&quot;))
+.withColumn(&quot;amount_spent_list&quot;, $&quot;user_amount_spent_list&quot;.getField(&quot;_2&quot;))
+.drop(&quot;user_amount_spent_list&quot;)
+.join(biz_df, &quot;business_id&quot;)
+
+user_business_amount_spent_df.show()</code></pre>
+<pre><code>## 
+## +-----------+--------------+-----------------+-------------+
+## |business_id|userIndex_list|amount_spent_list|total_revenue|
+## +-----------+--------------+-----------------+-------------+
+## |          1|        [0, 1]|     [14.0, 11.0]|         36.7|
+## |          0|           [0]|           [13.0]|         13.9|
+## +-----------+--------------+-----------------+-------------+
+## </code></pre>
+<p>Note that we use the UDF above to ensure user user indices are in ascending
+order as the <em>collect_list</em> function does not ensure any specific ordering.</p>
+<p>Now, all there’s left to do is represent every row as a sparse vector and
+it’s corresponding label. I’ve also created a small case class that retains
+the <em>business_id</em> identifier:</p>
+<pre class="r"><code>import org.apache.spark.ml.linalg.SparseVector
+case class LabeledPoint2(label: Double, features: SparseVector, business: Int)
+val num_columns = stringIndexerModel.labelsArray.size + 1
+val sparse_user_business_amount_spent_df = user_business_amount_spent_df
+.map(r =&gt; LabeledPoint2(r.getDouble(3), 
+                       new SparseVector(size = num_columns, 
+                                        indices = r.getAs[Seq[Int]](&quot;userIndex_list&quot;).toArray, 
+                                        values = r.getAs[Seq[Double]](&quot;amount_spent_list&quot;).toArray), 
+                       r.getInt(0)))
+
+sparse_user_business_amount_spent_df.show(truncate=false)</code></pre>
+<pre><code>## 
+## +-----+---------------------+--------+
+## |label|features             |business|
+## +-----+---------------------+--------+
+## |36.7 |(2,[0,1],[14.0,11.0])|1       |
+## |13.9 |(2,[0],[13.0])       |0       |
+## +-----+---------------------+--------+
+## </code></pre>
+<p>and voila - there you have it - our matrix is encoded sparsely, enabling us
+to conveniently store it in memory and fitting to it all models available in spark
+ml in a scalable manner! In my application fitting a linear regression took
+20-30 minutes.</p>
+<pre class="r"><code>import org.apache.spark.ml.regression.LinearRegression
+val lr = new LinearRegression()
+.setFitIntercept(false)
+
+val lrModel = lr.fit(sparse_user_business_amount_spent_df)</code></pre>
+<p>We can see our regression arrived at the correct betas (1,2):</p>
+<pre class="r"><code>lrModel.coefficients</code></pre>
+<pre><code>## [1] &quot;org.apache.spark.ml.linalg.Vector = [1.0692307692307697,1.9755244755244754]&quot;</code></pre>
+<p>One interesting fact about the above problem setup is that since it has more
+columns than rows it fits the training data perfectly (resulting in 0 training
+error).
+While this usually indicates overfitting, the above model performs pretty well
+in my application. This probably has to do with a phenomenon called “double descent
+risk curve”. More on that on my next post!</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

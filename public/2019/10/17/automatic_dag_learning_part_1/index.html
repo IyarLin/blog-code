@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>Automatic DAG learning - part 1 - Just be-cause</title>
+<meta property="og:title" content="Automatic DAG learning - part 1 - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">6 min read</span>
+    
+
+    <h1 class="article-title">Automatic DAG learning - part 1</h1>
+
+    
+    <span class="article-date">2019-10-17</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p><img src="/post/automatic_DAG_learning_part_1_files/Dag-score.jpg" width="650" height="400" /></p>
+<p>I was really struggling with finding a header pic for this post when I came across the one above - titled <a href="https://www.google.com/search?q=dag&amp;sxsrf=ACYBGNSbNuRo9RIXip-5aOAMO3qcPF0cmg:1571232790582&amp;source=lnms&amp;tbm=isch&amp;sa=X&amp;ved=0ahUKEwjb6d2i8qDlAhWKOcAKHSfGBiwQ_AUIEigB&amp;biw=1680&amp;bih=890&amp;dpr=2#imgrc=g90lBqR0P6M8DM:">“Dag scoring and selection”</a> and since it’s sort of the topic of this post I decided to use it!</p>
+<div id="intro" class="section level1">
+<h1>Intro</h1>
+<p>On my <a href="https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/">second</a> post I’ve stressed how important it is to use the correct adjustment set when trying to estimate a causal relationship between some treatment and exposure variables. The key to using the correct adjustment set is correctly identifying the underling DAG generating a dataset.</p>
+<p>A few approaches I can think of to obtain a DAG for causal inference would be:</p>
+<ol style="list-style-type: decimal">
+<li>Use domain knowledge and theory<br />
+</li>
+<li>Pick one of a few candidate DAGs by comparing their fit to the data<br />
+</li>
+<li>Use algorithms to automatically “learn” the underlying DAG</li>
+</ol>
+<p>In this post I’ll explore the last approach. Being able to learn the underlying model DAG from a dataset “automatically” would enable non subject matter experts to do Causal Inference in a very similar fashion to classic ML.</p>
+</div>
+<div id="existing-methods-for-learning-dags" class="section level1">
+<h1>Existing methods for learning DAGs</h1>
+<p>R has tons of packages for DAG estimation. Fortunately, the <a href="https://annehpetersen.shinyapps.io/causalDisco/">causalDisco</a> is a great shiny app that enables searching DAG estimation functions using different criteria.</p>
+<p>In this post I’ll restrict the discussion to the scenario where there are no hidden confounders and where the dataset contains both discrete (i.e. categorical) and numeric variables. We’d also like our estimation function to output a DAG with all edges oriented. Below we can see the results of applying these conditions in the causalDisco app:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/Screen%20Shot%202019-10-17%20at%209.01.40.png" width="600" height="550" /></p>
+<p>We get the following list: <em>bnlearn::hc</em>, <em>bnlearn::tabu</em>, <em>bnlearn::mmhc</em>, <em>bnlearn::rsmax2</em>, <em>deal::autosearch</em> and <em>deal::heuristic</em>.</p>
+<p>After playing around a bit with the <em>deal</em> functions I found they were too manual for a quick algorithm comparison. I’ve thus decided to use only the <em>bnlearn</em> functions.</p>
+</div>
+<div id="estimated-dag-dissimilarity-measurements" class="section level1">
+<h1>Estimated DAG dissimilarity measurements</h1>
+<p>How can we measure how different our estimated DAG is from the true DAG?</p>
+<div id="edge-distance" class="section level2">
+<h2>Edge distance</h2>
+<p>A simple way to measure estimated DAG dissimilarity with the true DAG would be to count how many edges are present in the true DAG yet missing in the estimated DAG and conversely, how many edges are present in the estimated DAG yet do not exist in the true DAG.</p>
+<p>Let’s take as an example the DAG presented on my <a href="https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/">last post</a> (presented on the left), along with an estimated DAG (on the right):</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>We can see in the above example that in the estimated DAG there’s an edge <span class="math inline">\(gender \rightarrow ageGroup\)</span> which doesn’t exist in the true DAG, and that it’s missing the edge <span class="math inline">\(nativeBorn \rightarrow educ\)</span>. So the edge distance this case is 2.</p>
+</div>
+<div id="hamming-distance" class="section level2">
+<h2>Hamming distance</h2>
+<p>Even if an edge exists in the 2 DAGs, it would make sense to penalize it if the edge orientation is wrong. The Hamming distance is the same as the edge distance, only it counts in addition edges oriented incorrectly. In the above example we can see that the edge <span class="math inline">\(educ \rightarrow gender\)</span> is oriented incorrectly (the true orientation is <span class="math inline">\(educ \leftarrow gender\)</span>) and thus the Hamming distance in this case would be 3.</p>
+</div>
+<div id="structural-intervention-distance" class="section level2">
+<h2>Structural Intervention Distance</h2>
+<p>The reason we construct DAGs to begin with is to enable correct adjustment set identification. It would thus make sense to measure DAG dissimilarity in light of that motivation.</p>
+<p>To that end, the <a href="https://arxiv.org/abs/1306.1043">Structural Intervention Distance</a> (SID) counts all possible treatment - exposure pairs where the estimated DAG does not yield a correct adjustment set.</p>
+<p>To see the cases in the example above where the estimated adjustment sets are different than the true adjustment sets we can check the table below (we note an empty set {} means no conditioning is required to estimate the causal effect while “No adjustment sets” means there isn’t any set of variables we can adjust for to estimate the causal effect):</p>
+<table style="width:93%;">
+<colgroup>
+<col width="16%" />
+<col width="18%" />
+<col width="29%" />
+<col width="29%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">treatment</th>
+<th align="center">exposure</th>
+<th align="center">True set</th>
+<th align="center">Estimated set</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">gender</td>
+<td align="center">educ</td>
+<td align="center">{}</td>
+<td align="center">No adjustment sets</td>
+</tr>
+<tr class="even">
+<td align="center">educ</td>
+<td align="center">gender</td>
+<td align="center">No adjustment sets</td>
+<td align="center">{}</td>
+</tr>
+<tr class="odd">
+<td align="center">educ</td>
+<td align="center">nativeBorn</td>
+<td align="center">No adjustment sets</td>
+<td align="center">{}</td>
+</tr>
+<tr class="even">
+<td align="center">gender</td>
+<td align="center">nativeBorn</td>
+<td align="center">{}</td>
+<td align="center">{}</td>
+</tr>
+<tr class="odd">
+<td align="center">educ</td>
+<td align="center">vocab</td>
+<td align="center">{nativeBorn}</td>
+<td align="center">{}</td>
+</tr>
+<tr class="even">
+<td align="center">gender</td>
+<td align="center">vocab</td>
+<td align="center">{}</td>
+<td align="center">{educ}</td>
+</tr>
+</tbody>
+</table>
+<p>The SID in the example above would thus be 6.</p>
+</div>
+</div>
+<div id="dag-estimation-algorithms-benchmarking" class="section level1">
+<h1>DAG estimation algorithms benchmarking</h1>
+<p>In this section we’ll use the <a href="https://github.com/IyarLin/simMixedDAG">simMixedDAG</a> package to simulate datasets from a DAG and benchmark different algorithms on recovering it using the above measures.</p>
+<p>The DAG and data generating process (DGP) in this section will be based on the <a href="https://vincentarelbundock.github.io/Rdatasets/doc/carData/GSSvocab.html">General Social Survey</a> data.</p>
+<p>The data structure is shown below:</p>
+<table>
+<caption>27360 Observations</caption>
+<colgroup>
+<col width="16%" />
+<col width="29%" />
+<col width="41%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">variable</th>
+<th align="center">class</th>
+<th align="center">sample_values</th>
+<th align="center">missing</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">year</td>
+<td align="center">numeric</td>
+<td align="center">Min. = 1978, 1st Qu. = 1988,
+Median = 1996, Mean = 1997.49,
+3rd Qu. = 2008, Max. = 2016</td>
+<td align="center">0%</td>
+</tr>
+<tr class="even">
+<td align="center">gender</td>
+<td align="center">factor with 2 levels</td>
+<td align="center">female, male</td>
+<td align="center">0%</td>
+</tr>
+<tr class="odd">
+<td align="center">nativeBorn</td>
+<td align="center">factor with 2 levels</td>
+<td align="center">no, yes</td>
+<td align="center">0%</td>
+</tr>
+<tr class="even">
+<td align="center">ageGroup</td>
+<td align="center">factor with 5 levels</td>
+<td align="center">30-39, 18-29, 60+, 40-49,
+50-59</td>
+<td align="center">0%</td>
+</tr>
+<tr class="odd">
+<td align="center">educGroup</td>
+<td align="center">factor with 5 levels</td>
+<td align="center">16 yrs, &lt;12 yrs, 13-15 yrs, 12
+yrs, &gt;16 yrs</td>
+<td align="center">0%</td>
+</tr>
+<tr class="even">
+<td align="center">vocab</td>
+<td align="center">numeric</td>
+<td align="center">Min. = 0, 1st Qu. = 5, Median
+= 6, Mean = 6, 3rd Qu. = 7,
+Max. = 10</td>
+<td align="center">0%</td>
+</tr>
+<tr class="odd">
+<td align="center">age</td>
+<td align="center">numeric</td>
+<td align="center">Min. = 18, 1st Qu. = 31,
+Median = 43, Mean = 45.75, 3rd
+Qu. = 59, Max. = 89</td>
+<td align="center">0%</td>
+</tr>
+<tr class="even">
+<td align="center">educ</td>
+<td align="center">numeric</td>
+<td align="center">Min. = 0, 1st Qu. = 12, Median
+= 13, Mean = 13.16, 3rd Qu. =
+16, Max. = 20</td>
+<td align="center">0%</td>
+</tr>
+</tbody>
+</table>
+<p>We’ll assume throughout the example that the following is the true DAG:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>The DGP will be constructed using the <em>non_parametric_dag_model</em> function from <em>simMixedDAG</em>.</p>
+<p>For every algorithm and sample size we simulate 200 datasets and measure the estimated DAG accuracy.</p>
+<p>Below we can see the average simulation results for the edge distance measure for different samples sizes:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>We can see that the algorithm performance is comparable up to around 27360 observations, after which <em>mmhc</em> and <em>rsmax2</em> flatten out while <em>hc</em> and <em>tabu</em> approach perfect estimation of the DAG skeleton.</p>
+<p>Below we can see the average simulation results for the Hamming distance measure:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>We can see that pretty fast all algorithms hit a performance plateau at around 6.</p>
+<p>When it comes to Structural Intervention Distance things look even worse:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<p>Let’s revisit that last one with error bars just for mmhc:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<p>We can see that the performance is essentially unchanged across different sample sizes (all confidence intervals overlap).</p>
+<p>To get a sense of what different SID scores mean, we can calculate the probability of finding the correct adjustment set given a random selection of a treatment and control pair using the following equation:</p>
+<p><span class="math display">\[P(\text{correct adj set)} = 1 - \frac{SID}{\#\{\text{possible treatment - exposure pairs}\}}\]</span>
+In our case given there are 8 nodes we have <span class="math inline">\(\#\{\text{possible treatment - exposure pairs}\} = 8 \cdot 7 = 56\)</span>.</p>
+<p>Below is the resulting graph:</p>
+<p><img src="/post/automatic_DAG_learning_part_1_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>Pretty abysmal.</p>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>While all algorithms converge on the correct DAG skeleton as the sample size increases, none of them is able to orient the edges correctly. So at least for the algorithms surveyed, benchmarked on our specific simulated dataset it would seem automatic DAG learning isn’t a very reliable way to find the correct adjustment set.</p>
+</div>
+<div id="all-is-lost" class="section level1">
+<h1>All is lost?</h1>
+<p>Despair not! For in my next blog post I’ll introduce a small package I’ve written to address the issue of DAG edge orientation.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

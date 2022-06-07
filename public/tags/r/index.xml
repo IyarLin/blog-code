@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>R on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/r/</link>
+    <description>Recent content in R on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 23 May 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/r/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Sometimes more data can hurt!</title>
+      <link>https://iyarlin.github.io/2021/05/23/sample_wise_double_descent_results_reproduction/</link>
+      <pubDate>Sun, 23 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2021/05/23/sample_wise_double_descent_results_reproduction/</guid>
+      <description>Photo by Ben White on Unsplash
+So here’s a mind blower: In some cases having more samples can actually reduce model performance. Don’t believe it? Neither did I! Read on to see how I demonstrate that phenomenon using a simulation study.
+Some context On a recent blog post I’ve discussed a scalable sparse linear regression model I’ve developed at work. One of it’s interesting properties is that it’s an interpolating model - meaning it has 0-training error.</description>
+    </item>
+    
+    <item>
+      <title>Don&#39;t be fooled by the hype python&#39;s got</title>
+      <link>https://iyarlin.github.io/2021/05/02/dont_be_fooled_by_the_hype/</link>
+      <pubDate>Sun, 02 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2021/05/02/dont_be_fooled_by_the_hype/</guid>
+      <description>R still R still is the tool you want We all know python popularity among DS practitioners has soared over the past few years, signaling both aspiring DS on the one hand and organizations on the other to favor python over R in a snowballing dynamic.
+I’m writing this post to help turn the tide and let us all keep writing in the language we love and are most productive with.</description>
+    </item>
+    
+    <item>
+      <title>dtplyr speed benchmarks</title>
+      <link>https://iyarlin.github.io/2020/05/26/dtplyr_benchmarks/</link>
+      <pubDate>Tue, 26 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/05/26/dtplyr_benchmarks/</guid>
+      <description>R has many great tools for data wrangling. Two of those are the dplyr and data.table packages. When people wonder which one should they learn it is often argued that dplyr is considerably slower compared with data.table.
+Granted, data.table is blazing fast, but I personally find the syntax hard and un-intuitive and the speed difference doesn’t make much of a difference in most use cases I encountered.
+The only frequent scenario where I’ve experienced a significant performance gap is when doing operations over a very large number of groups.</description>
+    </item>
+    
+    <item>
+      <title>dowhy library exploration</title>
+      <link>https://iyarlin.github.io/2020/04/20/dowhy_exploration/</link>
+      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/04/20/dowhy_exploration/</guid>
+      <description>It is not often that I find myself thinking “man, I wish we had in R that cool python library!”. That is however the case with the dowhy library which “provides a unified interface for causal inference methods and automatically tests many assumptions, thus making inference accessible to non-experts”.
+Luckily enough though, the awesome folks at Rstudio have written the reticulate package just for that sort of occasion: It “provides a comprehensive set of tools for interoperability between Python and R”.</description>
+    </item>
+    
+    <item>
+      <title>Automatic DAG learning - part 2</title>
+      <link>https://iyarlin.github.io/2020/01/21/automatic_dag_learning_part_2/</link>
+      <pubDate>Tue, 21 Jan 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/01/21/automatic_dag_learning_part_2/</guid>
+      <description>Intro We’ve seen on a previous post that one of the main differences between classic ML and Causal Inference is the additional step of using the correct adjustment set for the predictor features.
+In order to find the correct adjustment set we need a DAG that represents the relationships between all features relevant to our problem.
+One way of obtaining the DAG would be consulting domain experts. That however makes the process less accessible to wide audiences and more manual in nature.</description>
+    </item>
+    
+    <item>
+      <title>Automatic DAG learning - part 1</title>
+      <link>https://iyarlin.github.io/2019/10/17/automatic_dag_learning_part_1/</link>
+      <pubDate>Thu, 17 Oct 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/10/17/automatic_dag_learning_part_1/</guid>
+      <description>I was really struggling with finding a header pic for this post when I came across the one above - titled “Dag scoring and selection” and since it’s sort of the topic of this post I decided to use it!
+Intro On my second post I’ve stressed how important it is to use the correct adjustment set when trying to estimate a causal relationship between some treatment and exposure variables.</description>
+    </item>
+    
+    <item>
+      <title>&#34;Real life&#34; DAG simulation using the simMixedDAG package</title>
+      <link>https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/</link>
+      <pubDate>Tue, 23 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/</guid>
+      <description>Intro I’ve discussed on several blog posts how Causal Inference involves making inference about unobserved quantities and distributions (e.g. we never observe \(Y|do(x)\)). That means we can’t benchmark different algorithms on Causal Inference tasks (e.g \(ATE/CATE\) estimation) the same way we do in ML because we don’t have any ground truth to benchmark against.
+In the absence of ground truth, one of the main tools left for model comparison and performance bench-marking is simulation studies.</description>
+    </item>
+    
+    <item>
+      <title>My 2 cents on the &#34;R vs Python&#34; squabble</title>
+      <link>https://iyarlin.github.io/2019/07/11/my_2_cents_on_the_r_vs_python_squabble/</link>
+      <pubDate>Thu, 11 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/07/11/my_2_cents_on_the_r_vs_python_squabble/</guid>
+      <description>Intro In this post I’ll make an exception and instead of sharing my research I’ll chime in on the never ending “R vs Python” squabble.
+The tl;dr version is:
+R is superior to Python for doing data science If you’re a newcomer to data science you should probably learn Python. OK, so “what is data science” is probably the title of even more posts than “R vs Python”. I’m going to circumvent that discussion by clarifying that throughout this post when I talk about data science I refer to generating value from data using machine learning, statistics and visualizations.</description>
+    </item>
+    
+    <item>
+      <title>Causal inference bake off (Kaggle style!)</title>
+      <link>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</link>
+      <pubDate>Mon, 20 May 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</guid>
+      <description>Intro On my last few posts I’ve tried answering high level questions such as “What is Causal inference?”, “How is it different than ML?” and “When should I use it?”.
+In this post we finally get our hands dirty with some Kaggle style Causal Inference algorithms bake off! In this competition I’ll pit some well known ML algorithms vs a few specialized Causal Inference (CI) algorithms and find out who’s hot and who’s not!</description>
+    </item>
+    
+    <item>
+      <title>&#34;X affects Y&#34;. What does that even mean?</title>
+      <link>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</link>
+      <pubDate>Wed, 13 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/</guid>
+      <description>On my last post I gave an intuitive demonstration of what’s causal inference and how it’s different than classic ML.
+After receiving some feedback I realize that while the post was easy to digest, some confusion remains. In this post I’ll delve a bit deeper into what the “causal” in Causal Inference actually means.
+Analyzing the effect of X on Y The field of Causal inference deals with the question of “How does X affect Y?</description>
+    </item>
+    
+  </channel>
+</rss>

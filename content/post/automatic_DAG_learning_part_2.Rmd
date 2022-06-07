@@ -1,0 +1,387 @@
+---
+title: 'Automatic DAG learning - part 2'
+author: Iyar Lin
+date: '2020-01-21'
+slug: automatic_DAG_learning_part_2
+categories:
+  - R
+tags: [R, simulation, DAG]
+comments: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that ever happend to me
+  "bnlearn", # structure learning algorithms
+  "carData", # GSSvocab dataset
+  "ggdag", # ggplot DAGs
+  "dagitty", # Create DAGs
+  "doParallel", # parallel processing
+  "foreach" # foreach loop
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+pacman::p_load_gh("IyarLin/simMixedDAG")
+pacman::p_load_gh("IyarLin/orientDAG")
+```
+
+![](/post/automatic_DAG_learning_part_2_files/orientDAGhex.png)
+
+# Intro 
+
+We've seen on a previous [post](https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/) that one of the main differences between classic ML and Causal Inference is the additional step of using the correct adjustment set for the predictor features.
+
+In order to find the correct adjustment set we need a DAG that represents the relationships between all features relevant to our problem.
+
+One way of obtaining the DAG would be consulting domain experts. That however makes the process less accessible to wide audiences and more manual in nature. Learning the DAG from data automatically can thus make Causal Inference more streamlined usable.
+
+On my last [blog post](https://iyarlin.github.io/2019/10/17/automatic_dag_learning_part_1/) we've hit a dead-end when it seemed non of the algorithms surveyed was able to learn the DAG accurately enough.
+
+# Enter: orientDAG package
+
+While the algorithms surveyed on my last post were able to converge on the correct DAG skeleton (find edge presence without it's orientation) they all failed in orienting the edges correctly. This means that for a given pair of variables X,Y the algorithms were able to tell if they are causally linked, but unable to determine if X causes Y or vice versa.
+
+We can utilize literature centered around finding causal direction to correctly orient DAG edges after learning it's skeleton.
+
+When both X and Y are continuous, we can use the generalized correlation measure developed by [Vinod](http://dx.doi.org/10.1080/03610918.2015.1122048).
+
+When both X and Y are discrete, we can use the distance correlation measure (see [Liu and Chan, 2016](https://arxiv.org/pdf/1803.07712.pdf)).
+
+When either X or Y are discrete, and the other is continuous we can discretisize the continuous variable (using for example the procedure at *infotheo::discretize*) and use the method for 2 discrete variables mentioned above.
+
+The [orientDAG](https://github.com/IyarLin/orientDAG) package uses the approach outlined above to orient DAG skeleton edges. To demonstrate how it works let's go back to the example shown on my last post. 
+
+We used the [simMixedDAG](https://github.com/IyarLin/simMixedDAG) package to simulate datasets from the DAG below:
+
+```{r}
+data("GSSvocab")
+GSSvocab <- GSSvocab %>%
+  filter(complete.cases(.)) %>%
+  mutate(year = as.numeric(as.character(year)))
+
+true_dag_dagitty <- dagitty("dag{
+                            age -> educGroup;
+                            age -> nativeBorn;
+                            nativeBorn -> ageGroup;
+                            nativeBorn -> vocab;
+                            educ -> age;
+                            educ -> gender;
+                            educ -> year;
+                            vocab -> gender;
+                            vocab -> year
+                            }")
+
+coordinates(true_dag_dagitty) <- list(
+  x = setNames(
+    object = c(
+      -2.241, 0.466, -0.079, -5.233, 1.324, 0.366,
+      2.100, 3.258
+    ),
+    nm = c(
+      "age", "ageGroup", "educ", "educGroup", "gender",
+      "nativeBorn", "vocab", "year"
+    )
+  ),
+  y = setNames(
+    object = c(
+      -0.416, -5.303, 1.955, -0.753, 3.763, -2.297,
+      0.460, 2.494
+    ),
+    nm = c(
+      "age", "ageGroup", "educ", "educGroup", "gender",
+      "nativeBorn", "vocab", "year"
+    )
+  )
+)
+
+true_dag <- dagitty_to_adjmatrix(true_dag_dagitty)
+
+ggdag(true_dag_dagitty, stylized = F, node_size = 20, text_size = c(5, 5, 2.9, 5, 2.9, 4, 5, 2.9)) + theme_dag_blank() +
+  theme(plot.title = element_text(size = 30, hjust = 0.5))
+```
+
+Following the bench-marking results on my last post we'll restrict our attention to the *bnlearn::tabu* function for learning the DAG skeleton.
+
+The main function in the orientDAG is fittingly called `orient_dag`. It takes as input an adjacency matrix where a 1 in the i,j position denotes an arrow from node i to node j. 
+
+Below we can see the adjacency matrix corresponding to the DAG above:
+
+```{r}
+true_dag
+```
+
+The package also contains utility functions that facilitate DAG conversion between different representations. We can thus take the fitted *bn* DAG object from the *tabu* function and convert it to an adjacency matrix using the function `bn_to_adjmatrix`. The DAG below shows all conversions available in the package:
+
+```{r}
+conversions <- dagitty("dag {
+  bn [pos=\"0,0\"]
+  dagitty [pos=\"0.5,-1\"]
+  adjmatrix [pos=\"1,0\"]
+  adjmatrix -> dagitty
+  dagitty -> adjmatrix
+  bn -> adjmatrix
+}")
+
+tidy_conversions <- tidy_dagitty(conversions)
+tidy_conversions$data$xend[2] <- 0.98
+
+tidy_conversions$data$xend[3] <- 0.996
+tidy_conversions$data$yend[3] <- -0.031
+
+tidy_conversions$data$x[3] <- 0.51
+
+tidy_conversions$data$xend[1] <- 0.514
+tidy_conversions$data$yend[1] <- -0.969
+ggdag(tidy_conversions, stylized = F, node_size = 25) + theme_dag_blank()
+
+M <- 100
+```
+
+As before, we'll measure DAG learning accuracy by the [Structural Intervention Distance](https://arxiv.org/abs/1306.1043). For every sample size $n$ I simulate `r M` datasets and measure SID. Below I compare the SID distribution for 3 algorithms:
+
+1. *tabu*: DAGs obtained using the *tabu* function from the *bnlearn* package  
+1. *tabu + orientDAG*: DAGs obtained by further orienting the DAG's from *tabu* using the *orientDAG* package  
+1. *random*: DAGs obtained by randomly re-orienting the DAGs obtained by the *tabu* function  
+
+```{r}
+samples <- c(6400, nrow(GSSvocab), 80000)
+ncores <- detectCores() - 1
+
+results <- expand.grid(
+  n = samples,
+  M = 1:M, stringsAsFactors = F
+) %>%
+  mutate(
+    tabu = NA, tabu_orientDAG = NA, random = NA,
+    core = sample(rep(seq(1, ncores - 1), length.out = n()), size = n(), replace = F), M = NULL
+  ) %>%
+  nest(data = -core)
+
+measure_DAG_accuracy <- function(df) {
+  for (i in 1:nrow(df)) {
+    sim_data <- simMixedDAG::sim_mixed_dag(non_param_dag_model, N = df$n[i])
+    # tabu
+    est_dag <- bnlearn::tabu(sim_data)
+    est_dag <- orientDAG::bn_to_adjmatrix(est_dag)
+    est_dag <- est_dag[
+      match(rownames(true_dag), rownames(est_dag)),
+      match(colnames(true_dag), colnames(est_dag))
+    ]
+    df$tabu[i] <- orientDAG::dag_dist(true_dag, est_dag, distance_measure = "sid")
+    # tabu + orient_dag
+    est_dag <- orientDAG::orient_dag(
+      adjmatrix = est_dag,
+      x = sim_data, max_continuous_pairs_sample = 8000
+    )
+    df$tabu_orientDAG[i] <- orientDAG::dag_dist(true_dag, est_dag, distance_measure = "sid")
+    # random
+    edges <- which(est_dag == 1, arr.ind = T)
+    swap <- rbinom(n = nrow(edges), prob = 0.5, size = 1) == 1
+    edges[swap, ] <- edges[swap, c(2, 1)]
+    est_dag[est_dag == 1] <- 0
+    est_dag[edges] <- 1
+    df$random[i] <- orientDAG::dag_dist(true_dag, est_dag, distance_measure = "sid")
+  }
+  return(df)
+}
+
+if (!"dag_accuracy2.rds" %in% list.files("../../../")) {
+  non_param_dag_model <- non_parametric_dag_model(true_dag_dagitty, GSSvocab)
+  cl <- makeCluster(ncores)
+  registerDoParallel(cl)
+  dag_accuracy2 <- foreach(i = 1:nrow(results), .combine = rbind) %dopar% {
+    measure_DAG_accuracy(results$data[[i]])
+  }
+  stopCluster(cl)
+  saveRDS(dag_accuracy2, "../../../dag_accuracy2.rds")
+} else {
+  dag_accuracy2 <- readRDS("../../../dag_accuracy2.rds")
+}
+```
+
+```{r}
+cols <- hcl(h = seq(15, 375, length = 5), l = 65, c = 100)[1:4]
+dag_accuracy2 %>%
+  gather(algorithm, SID, -n) %>%
+  mutate(
+    algorithm = factor(replace(algorithm, algorithm == "tabu_orientDAG", "tabu + orientDAG"), 
+                       levels = c("tabu", "tabu + orientDAG", "random")),
+    n = factor(n)
+  ) %>%
+  ggplot(aes(n, SID, fill = algorithm)) + geom_violin(position = position_dodge()) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(), text = element_text(size = 15),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  ) +
+  scale_fill_manual(values = c("tabu" = cols[1], "tabu + orientDAG" = cols[2], "random" = cols[3]))
+```
+
+We can see that the *tabu* performance deteriorates as sample size grows while *tabu + orientDAG* improves.
+
+From SID we can derive a more intuitive measure: The probability of finding the correct adjustment set for a randomly chosen pair of treatment-exposure variables:
+
+$$P(\text{correct adj set)} = 1 - \frac{SID}{\#\{\text{possible treatment - exposure pairs}\}}$$
+
+Below we can see the corresponding plot:
+
+```{r}
+dag_accuracy2 %>%
+  gather(algorithm, sid, -n) %>%
+  mutate(
+    algorithm = replace(algorithm, algorithm == "tabu_orientDAG", "tabu + orientDAG"),
+    n = factor(n),
+    `P(correct adj set)` = 1 - sid / 56
+  ) %>%
+  ggplot(aes(n, `P(correct adj set)`, fill = algorithm)) + geom_violin(position = position_dodge()) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(), text = element_text(size = 15),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  ) +
+  scale_fill_manual(values = c("tabu" = cols[1], "tabu + orientDAG" = cols[2], "random" = cols[3]))
+```
+
+For $n = 80,000$ the *orientDAG* package about doubles the performance compared with *tabu*.
+
+# Bayesian Network DGP
+
+In the above example the underlying data generating process (DGP) didn't conform to the Bayesian Network (BN) assumptions, which might explain the deteriorating performance of the *tabu* function.
+
+Let's see how the different algorithms fare when the underlying DGP does conform to the BN assumptions. 
+
+Below I plot the "mehra" DAG taken from the bnlearn package:
+
+```{r}
+M <- 10
+
+results <- expand.grid(
+  n = samples,
+  M = 1:M, stringsAsFactors = F
+) %>%
+  mutate(
+    tabu = NA, tabu_orientDAG = NA, tabu_orientDAG_conservative = NA, random = NA,
+    core = sample(rep(seq(1, ncores - 1), length.out = n()), size = n(), replace = F), M = NULL
+  ) %>%
+  nest(-core)
+
+mehra <- readRDS(url("http://www.bnlearn.com/bnrepository/mehra/mehra-complete.rds"))
+mehra_mat <- matrix(0, ncol = length(mehra), nrow = length(mehra), dimnames = list(names(mehra), names(mehra)))
+for (i in 1:ncol(mehra_mat)) {
+  mehra_mat[rownames(mehra_mat) %in% mehra[[names(mehra)[i]]]$parents, i] <- 1
+}
+measure_DAG_accuracy <- function(df) {
+  for (i in 1:nrow(df)) {
+    sim_data <- bnlearn::rbn(mehra, n = df$n[i])
+    # tabu
+    est_dag <- bnlearn::tabu(sim_data)
+    est_dag <- orientDAG::bn_to_adjmatrix(est_dag)
+    est_dag <- est_dag[
+      match(rownames(mehra_mat), rownames(est_dag)),
+      match(colnames(mehra_mat), colnames(est_dag))
+    ]
+    df$tabu[i] <- orientDAG::dag_dist(mehra_mat, est_dag, distance_measure = "sid")
+    # tabu + orient_dag
+    est_dag2 <- orientDAG::orient_dag(
+      adjmatrix = est_dag,
+      x = sim_data, max_continuous_pairs_sample = 6000,
+      continuous_thresh = 0, discrete_thresh = 0
+    )
+    df$tabu_orientDAG[i] <- orientDAG::dag_dist(mehra_mat, est_dag2, distance_measure = "sid")
+
+    # tabu + orient_dag - conservative
+    est_dag2 <- orientDAG::orient_dag(
+      adjmatrix = est_dag,
+      x = sim_data, max_continuous_pairs_sample = 6000,
+      continuous_thresh = 1, discrete_thresh = 0.2
+    )
+    df$tabu_orientDAG_conservative[i] <- orientDAG::dag_dist(mehra_mat, est_dag2, distance_measure = "sid")
+
+    # random
+    edges <- which(est_dag == 1, arr.ind = T)
+    swap <- rbinom(n = nrow(edges), prob = 0.5, size = 1) == 1
+    edges[swap, ] <- edges[swap, c(2, 1)]
+    est_dag[est_dag == 1] <- 0
+    est_dag[edges] <- 1
+    df$random[i] <- orientDAG::dag_dist(mehra_mat, est_dag, distance_measure = "sid")
+  }
+  return(df)
+}
+
+if (!"dag_accuracy3.rds" %in% list.files("../../../")) {
+  cl <- makeCluster(ncores)
+  registerDoParallel(cl)
+  dag_accuracy3 <- foreach(i = 1:nrow(results), .combine = rbind) %dopar% {
+    measure_DAG_accuracy(results$data[[i]])
+  }
+  stopCluster(cl)
+  saveRDS(dag_accuracy3, "../../../dag_accuracy3.rds")
+} else {
+  dag_accuracy3 <- readRDS("../../../dag_accuracy3.rds")
+}
+```
+
+```{r}
+mehra_dagitty <- graphLayout(adjmatrix_to_dagitty(mehra_mat))
+ggdag(mehra_dagitty, stylized = F) + theme_dag_blank()
+```
+
+The above DAG contains 24 nodes, of which 8 are categorical. The nodes are connected by 71 arrows.
+
+Below we can see SID for the different algorithms (this time running only `r M` simulations per sample size due to the network size):
+
+```{r}
+dag_accuracy3 %>%
+  gather(algorithm, SID, -n) %>%
+  filter(algorithm != "tabu_orientDAG_conservative") %>%
+  mutate(
+    algorithm = replace(algorithm, algorithm == "tabu_orientDAG", "tabu + orientDAG"),
+    n = factor(n),
+    `P(correct adj set)` = 1 - SID / 552
+  ) %>%
+  ggplot(aes(n, `P(correct adj set)`, fill = algorithm)) + geom_violin(position = position_dodge()) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(), text = element_text(size = 15),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  ) +
+  scale_fill_manual(values = c("tabu" = cols[1], "tabu + orientDAG" = cols[2], "random" = cols[3]))
+```
+
+We can now see that when the BN assumptions hold the *tabu* function fares best as expected, while the *tabu + orientDAG* fares as bad as a random guess or even worse. It's possible that the *tabu + orientDAG* performance is worse because it uses tests unrelated to the BN assumptions thus introducing noise to edges which are already oriented correctly by *tabu*. 
+
+We can mitigate such performance deterioration by introducing regularization parameters which force `orient_dag` to re-orient an edge only in cases where there is strong evidence for a given orientation. Namely, the difference between distance correlation/generalized correlations must exceed some threshold. We'll call this approach *tabu + orientDAG - conservative*.
+
+Below we can see the resulting performance measures:
+
+```{r}
+dag_accuracy3 %>%
+  gather(algorithm, SID, -n) %>%
+  filter(algorithm != "random") %>%
+  mutate(
+    algorithm = replace(algorithm, algorithm == "tabu_orientDAG_conservative", "tabu + orientDAG - conservative"),
+    algorithm = replace(algorithm, algorithm == "tabu_orientDAG", "tabu + orientDAG"),
+    n = factor(n),
+    `P(correct adj set)` = 1 - SID / 552
+  ) %>%
+  ggplot(aes(n, `P(correct adj set)`, fill = algorithm)) + geom_violin(position = position_dodge()) +
+  theme_bw() +
+  theme(
+    panel.grid = element_blank(), text = element_text(size = 15),
+    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)
+  ) +
+  scale_fill_manual(values = c("tabu" = cols[1], "tabu + orientDAG" = cols[2], "tabu + orientDAG - conservative" = cols[4]))
+```
+
+While the *tabu + orientDAG* still fares worse then *tabu*, it still is able to marginally at least outperform a random guess.
+
+# Conclusion
+
+It would seem that automatic learning of DAGs is highly dependent on knowing the underlying DGP assumptions and also requires very large sample sizes - thus making automatic learning of DAGs unreliable (at least for the examples surveyed in this post).
+
+It may be that a hybrid solution where some edges are white-listed (their presence and orientation are assumed known) and some are blacklisted (are assumed to be known not to exist) by an expert, followed by an automatic algorithm can produce more reliable results. 

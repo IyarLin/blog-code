@@ -1,0 +1,108 @@
+---
+title: 'Better churn prediction'
+author: Iyar Lin
+date: '2022-06-07'
+slug: better_churn_modeling
+categories:
+  - ML
+tags: [ML, survival_analysis, methodology, churn]
+comments: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
+library(ggplot2)
+```
+
+![](/post/better_churn_modeling_files/leaky bucket.png)
+
+First off - I'm excited to share this blog was instrumental in earning me a position 
+as senior data scientist at [Loops](https://getloops.ai/) - a startup that builds 
+an automated analytics platform for product and growth teams. 
+
+One of it's primary selling points is the application of advanced causal inference methodologies to uncover opportunities from observational data. 
+
+This happened a little over a year ago and during that time I've been quite busy developing causal inference methodologies for real world applications. Hence, I
+haven't posted in a while. I hope I'll go back to posting once every few months
+from now on.
+
+So without further ado, let's talk about better churn prediction.
+
+## To churn or not churn - what is the real question?
+
+One of the main topics I've been working on through the years is churn. Churn reduction is a top priority for many companies and correctly identifying it's 
+root causes can greatly improve their bottom line.
+
+Considering how well known and appreciated the churn problem is I'm always perplexed
+by how badly it is modeled in practice. 
+
+Churn is often formulated as a question of "who's most likely to churn?".
+This question naturally lends itself to classification modeling for which there's
+readily available software and tutorials.
+
+I argue however that churn is not really a question of "who" will churn but rather of "when".
+
+This is an important distinction for 2 reasons:
+
+1. Asking "who" will churn leads to biased modeling as will be demonstrated below.  
+1. In many cases a users' value is highly dependent on how long he'll stay subscribed. 
+This can only be answered by asking "when" rather than "who".
+
+## Cellphone subscribers example
+
+Take for example the classic case of cellphone subscribers. They pay a monthly fee 
+until some point in time in which they decide to terminate their contract (aka churn).
+
+Eventually they'll all churn: 30 years from now they will be either dead or use 
+Holograms to communicate rather than a Cellphone. 
+
+Let's visualize how typical subscribers' journey looks like:
+
+```{r, echo=F}
+lifelines_plot <- data.frame(
+    id = 8:1,
+    time = as.Date(c("2021-06-15", "2021-07-20", "2021-08-25", "2021-12-13", 
+                     "2022-01-20", "2022-02-16", "2022-04-02", "2022-05-20")),
+    xmin = as.Date(c("2021-06-15", "2021-07-20", "2021-08-25", "2021-12-13", 
+                     "2022-01-20", "2022-02-16", "2022-04-02", "2022-05-20")),
+    xmax = as.Date(c("2022-03-17", "2022-08-22", "2022-05-14", "2022-11-19", 
+                     "2022-05-14", "2022-06-13", "2022-06-18", "2022-08-03")), 
+                             plan = factor(rep(c("A", "B"), each = 4)))
+
+ggplot(lifelines_plot, aes(time,id,color = plan)) + 
+    geom_linerange(aes(xmin = xmin, xmax = xmax), size = 2) + 
+    theme(axis.ticks.y = element_blank(), axis.title.y = element_blank(), 
+          axis.text.y = element_blank(), panel.grid.major = element_blank(), 
+          panel.grid.minor.y = element_blank(), 
+          axis.text.x = element_text(angle = -45, vjust = 0), 
+          legend.key.size = unit(0.1, "npc"), legend.direction = "horizontal", 
+          legend.position = "top") +
+  scale_y_continuous(expand = expansion(add=2)) + 
+    geom_vline(xintercept = as.Date("2022-06-07"), lty = 2) + 
+  scale_x_date(date_breaks = "1 months", date_labels = "%m-%y", name = "Month")
+```
+
+The first subscriber on the top started on plan A on June 2021 and churned 
+on April 2022. The slashed line represents "Today" (the time the analysis is run) 
+which is June 7th 2022. 
+
+In the "who" question, users who have churned in the past (before "today") are labeled as "churned" ($y=1$) while those who churn in the future are labeled as "not churned" ($y=0$) since they are still subscribed when we observe them "today".
+
+We can see that users of plan A tend to take longer to churn  (their lines are longer)
+but since they joined earlier than plan B subscribers they have more time to churn
+and will be labeled as "churned" more often (50% of plan A vs 25% in plan B).
+
+We would thus wrongly conclude that plan A subscribers churn at a higher rate than 
+plan B subscribers.
+
+## Conlusion
+
+The bias illustrated above is very typical as cellphone plans are often introduced 
+one after the other. In the example above it can be see that on January 2022 plan 
+A was switched to plan B.
+
+In the next few blog posts I'll discuss how survival analysis deals with the bias
+demonstrated above and advanced use cases in churn prediction where survival analysis 
+is crucial for better churn modeling.
+
+

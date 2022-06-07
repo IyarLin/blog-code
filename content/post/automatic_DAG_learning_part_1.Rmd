@@ -1,0 +1,364 @@
+---
+title: 'Automatic DAG learning - part 1'
+author: Iyar Lin
+date: '2019-10-17'
+slug: automatic_dag_learning_part_1
+categories:
+  - R
+tags: [R, simulation]
+comments: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+packages <- c(
+  "tidyverse", # best thing that ever happend to me
+  "pander", # table rendering
+  "bnlearn", # structure learning algorithms
+  "carData", # GSSvocab dataset
+  "ggdag", # ggplot DAGs
+  "dagitty", # Create DAGs
+  "SID", # structIntervDist
+  "gridExtra", # arranging several ggplots together
+  "doParallel", # parallel processing
+  "foreach" # foreach loop
+)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = packages)
+pacman::p_load_gh("IyarLin/simMixedDAG")
+pacman::p_load_gh("IyarLin/orientDAG")
+source("../../miscellaneous files/utils_functions.R")
+```
+
+![](/post/automatic_DAG_learning_part_1_files/Dag-score.jpg){width=650px height=400px}
+
+I was really struggling with finding a header pic for this post when I came across the one above - titled ["Dag scoring and selection"](https://www.google.com/search?q=dag&sxsrf=ACYBGNSbNuRo9RIXip-5aOAMO3qcPF0cmg:1571232790582&source=lnms&tbm=isch&sa=X&ved=0ahUKEwjb6d2i8qDlAhWKOcAKHSfGBiwQ_AUIEigB&biw=1680&bih=890&dpr=2#imgrc=g90lBqR0P6M8DM:) and since it's sort of the topic of this post I decided to use it!
+
+# Intro 
+
+On my [second](https://iyarlin.github.io/2019/03/13/x-affects-y-what-does-that-even-mean/) post I've stressed how important it is to use the correct adjustment set when trying to estimate a causal relationship between some treatment and exposure variables. The key to using the correct adjustment set is correctly identifying the underling DAG generating a dataset.
+
+A few approaches I can think of to obtain a DAG for causal inference would be:
+
+1. Use domain knowledge and theory  
+1. Pick one of a few candidate DAGs by comparing their fit to the data  
+1. Use algorithms to automatically "learn" the underlying DAG  
+
+In this post I'll explore the last approach. Being able to learn the underlying model DAG from a dataset "automatically" would enable non subject matter experts to do Causal Inference in a very similar fashion to classic ML.
+
+# Existing methods for learning DAGs
+
+R has tons of packages for DAG estimation. Fortunately, the [causalDisco](https://annehpetersen.shinyapps.io/causalDisco/) is a great shiny app that enables searching DAG estimation functions using different criteria. 
+
+In this post I'll restrict the discussion to the scenario where there are no hidden confounders and where the dataset contains both discrete (i.e. categorical) and numeric variables. We'd also like our estimation function to output a DAG with all edges oriented. Below we can see the results of applying these conditions in the causalDisco app:
+
+![](/post/automatic_DAG_learning_part_1_files/Screen Shot 2019-10-17 at 9.01.40.png){width=600px height=550}
+
+We get the following list: *bnlearn::hc*, *bnlearn::tabu*, *bnlearn::mmhc*, *bnlearn::rsmax2*, *deal::autosearch* and *deal::heuristic*.
+
+After playing around a bit with the *deal* functions I found they were too manual for a quick algorithm comparison. I've thus decided to use only the *bnlearn* functions.
+
+# Estimated DAG dissimilarity measurements
+
+How can we measure how different our estimated DAG is from the true DAG?
+
+## Edge distance
+
+A simple way to measure estimated DAG dissimilarity with the true DAG would be to count how many edges are present in the true DAG yet missing in the estimated DAG and conversely, how many edges are present in the estimated DAG yet do not exist in the true DAG.
+
+```{r}
+true_dag <- dagitty("dag {
+ageGroup [pos=\"0,0\"]
+vocab [pos=\"1,-1\"]
+nativeBorn [pos=\"2,-2\"]
+educ [pos=\"3,-1\"]
+gender [pos=\"4,0\"]
+nativeBorn -> educ
+nativeBorn -> vocab
+educ -> vocab
+gender -> educ
+ageGroup -> vocab
+}")
+
+tidy_dag <- tidy_dagitty(true_dag)
+tidy_dag$data$xend[1] <- 0.9
+tidy_dag$data$yend[1] <- -0.9
+tidy_dag$data$xend[2] <- 1.2
+tidy_dag$data$xend[3] <- 3.1
+tidy_dag$data$yend[3] <- -0.9
+tidy_dag$data$xend[4] <- 2.9
+tidy_dag$data$yend[4] <- -1.1
+tidy_dag$data$xend[5] <- 1.1
+tidy_dag$data$yend[5] <- -1.1
+
+p1 <- ggdag(tidy_dag, node_size = 28) + theme_dag_blank() + ggtitle("True DAG") +
+  theme(plot.title = element_text(size = 30, hjust = 0.5)) +
+  scale_dag(expand_x = expand_scale(c(0.2, 0.2)), expand_y = expand_scale(c(0.2, 0.2)))
+
+estimated_dag <- dagitty("dag {
+ageGroup [pos=\"0,0\"]
+vocab [pos=\"1,-1\"]
+nativeBorn [pos=\"2,-2\"]
+educ [pos=\"3,-1\"]
+gender [pos=\"4,0\"]
+gender -> ageGroup
+nativeBorn -> vocab
+educ -> vocab
+educ -> gender
+ageGroup -> vocab
+}")
+
+tidy_dag2 <- tidy_dagitty(estimated_dag)
+tidy_dag2$data$xend[1] <- 0.9
+tidy_dag2$data$yend[1] <- -0.9
+tidy_dag2$data$xend[2] <- 3.9
+tidy_dag2$data$yend[2] <- -0.1
+tidy_dag2$data$xend[3] <- 1.2
+tidy_dag2$data$xend[4] <- 0.2
+tidy_dag2$data$xend[5] <- 1.1
+tidy_dag2$data$yend[5] <- -1.1
+
+p2 <- ggdag(tidy_dag2, node_size = 28) + theme_dag_blank() + ggtitle("Estimated DAG") +
+  theme(plot.title = element_text(size = 30, hjust = 0.5)) +
+  scale_dag(expand_x = expand_scale(c(0.2, 0.2)), expand_y = expand_scale(c(0.2, 0.2)))
+```
+
+Let's take as an example the DAG presented on my [last post](https://iyarlin.github.io/2019/07/23/mixed_dag_simulation_using_simmixeddag_package/) (presented on the left), along with an estimated DAG (on the right):
+
+```{r}
+grid.arrange(p1, p2, nrow = 1)
+```
+
+We can see in the above example that in the estimated DAG there's an edge $gender \rightarrow ageGroup$ which doesn't exist in the true DAG, and that it's missing the edge $nativeBorn \rightarrow educ$. So the edge distance this case is 2.
+
+## Hamming distance
+
+Even if an edge exists in the 2 DAGs, it would make sense to penalize it if the edge orientation is wrong. The Hamming distance is the same as the edge distance, only it counts in addition edges oriented incorrectly. In the above example we can see that the edge $educ \rightarrow gender$ is oriented incorrectly (the true orientation is $educ \leftarrow gender$) and thus the Hamming distance in this case would be 3.
+
+## Structural Intervention Distance
+
+The reason we construct DAGs to begin with is to enable correct adjustment set identification. It would thus make sense to measure DAG dissimilarity in light of that motivation.
+
+```{r}
+sid <- structIntervDist(dagitty_to_adjmatrix(true_dag), dagitty_to_adjmatrix(estimated_dag))
+vars <- names(true_dag)
+wrong_sets <- data.frame(
+  treatment = vars[which(sid$incorrectMat == 1, arr.ind = T)[, 1]],
+  exposure = vars[which(sid$incorrectMat == 1, arr.ind = T)[, 2]]
+) %>%
+  mutate(
+    `True set` = mapply(function(x, y) {
+      as.character.adjustmentSets(adjustmentSets(true_dag, x, y))
+    },
+    x = treatment, y = exposure
+    ),
+    `Estimated set` = mapply(function(x, y) {
+      as.character.adjustmentSets(adjustmentSets(estimated_dag, x, y))
+    },
+    x = treatment, y = exposure
+    )
+  )
+```
+
+To that end, the [Structural Intervention Distance](https://arxiv.org/abs/1306.1043) (SID) counts all possible treatment - exposure pairs where the estimated DAG does not yield a correct adjustment set.
+
+To see the cases in the example above where the estimated adjustment sets are different than the true adjustment sets we can check the table below (we note an empty set {} means no conditioning is required to estimate the causal effect while "No adjustment sets" means there isn't any set of variables we can adjust for to estimate the causal effect):
+
+```{r, results = "asis"}
+pandoc.table(wrong_sets)
+```
+
+The SID in the example above would thus be `r sid$sid`.
+
+# DAG estimation algorithms benchmarking
+
+In this section we'll use the [simMixedDAG](https://github.com/IyarLin/simMixedDAG) package to simulate datasets from a DAG and benchmark different algorithms on recovering it using the above measures.
+
+The DAG and data generating process (DGP) in this section will be based on the [General Social Survey](https://vincentarelbundock.github.io/Rdatasets/doc/carData/GSSvocab.html) data. 
+
+The data structure is shown below:
+
+```{r, results = "asis"}
+data("GSSvocab")
+GSSvocab <- GSSvocab %>%
+  filter(complete.cases(.)) %>%
+  mutate(year = as.numeric(as.character(year)))
+structure_df(GSSvocab) %>% pandoc.table(caption = paste0(nrow(GSSvocab), " Observations"))
+```
+
+We'll assume throughout the example that the following is the true DAG:
+
+```{r}
+set.seed(2)
+true_dag <- as.matrix(SID::randomDAG(p = ncol(GSSvocab), probConnect = 0.3))
+dimnames(true_dag) <- list(names(GSSvocab), names(GSSvocab))
+true_dag_dagitty <- adjmatrix_to_dagitty(true_dag)
+coordinates(true_dag_dagitty) <- list(
+  x = setNames(
+    object = c(
+      -2.241, 0.466, -0.079, -5.233, 1.324, 0.366,
+      2.100, 3.258
+    ),
+    nm = c(
+      "age", "ageGroup", "educ", "educGroup", "gender",
+      "nativeBorn", "vocab", "year"
+    )
+  ),
+  y = setNames(
+    object = c(
+      -0.416, -5.303, 1.955, -0.753, 3.763, -2.297,
+      0.460, 2.494
+    ),
+    nm = c(
+      "age", "ageGroup", "educ", "educGroup", "gender",
+      "nativeBorn", "vocab", "year"
+    )
+  )
+)
+ggdag(true_dag_dagitty, stylized = F, node_size = 20, text_size = c(5, 5, 2.9, 5, 2.9, 4, 5, 2.9)) + theme_dag_blank() +
+  theme(plot.title = element_text(size = 30, hjust = 0.5)) +
+  scale_dag(expand_x = expand_scale(c(0.2, 0.2)), expand_y = expand_scale(c(0.2, 0.2)))
+```
+
+The DGP will be constructed using the *non_parametric_dag_model* function from *simMixedDAG*.
+
+```{r}
+M <- 200
+samples <- c(seq(40, 120, by = 40)^2, nrow(GSSvocab), 80000)
+algorithms <- c("hc", "tabu", "mmhc", "rsmax2")
+ncores <- detectCores() - 1
+results <- expand.grid(
+  algorithm = algorithms,
+  n = samples,
+  M = 1:M, stringsAsFactors = F
+) %>%
+  mutate(
+    edge_dist = NA, hamming_dist = NA, sid = NA,
+    core = sample(rep(seq(1, ncores), length.out = n()), size = n(), replace = F)
+  ) %>%
+  nest(-core)
+
+measure_DAG_accuracy <- function(df) {
+  for (i in 1:nrow(df)) {
+    sim_data <- simMixedDAG::sim_mixed_dag(non_param_dag_model, N = df$n[i])
+    est_dag <- eval(expr = parse(text = paste0("bnlearn::", df$algorithm[i], "(sim_data)")))
+    est_dag <- orientDAG::bn_to_adjmatrix(est_dag)
+    est_dag <- est_dag[
+      match(rownames(true_dag), rownames(est_dag)),
+      match(colnames(true_dag), colnames(est_dag))
+    ]
+    df$edge_dist[i] <- orientDAG::dag_dist(true_dag, est_dag, distance_measure = "edge")
+    df$hamming_dist[i] <- orientDAG::dag_dist(true_dag, est_dag, distance_measure = "hamming")
+    df$sid[i] <- orientDAG::dag_dist(true_dag, est_dag, distance_measure = "sid")
+  }
+  return(df)
+}
+
+if (!"dag_accuracy.rds" %in% list.files("../../../")) {
+  non_param_dag_model <- non_parametric_dag_model(true_dag_dagitty, GSSvocab)
+  cl <- makeCluster(ncores)
+  registerDoParallel(cl)
+  dag_accuracy <- foreach(i = 1:nrow(results), .combine = rbind) %dopar% {
+    measure_DAG_accuracy(results$data[[i]])
+  }
+  stopCluster(cl)
+  saveRDS(dag_accuracy, "../../../dag_accuracy.rds")
+} else {
+  dag_accuracy <- readRDS("../../../dag_accuracy.rds")
+}
+```
+
+For every algorithm and sample size we simulate `r M` datasets and measure the estimated DAG accuracy.
+
+Below we can see the average simulation results for the edge distance measure for different samples sizes:
+
+```{r}
+dag_accuracy %>%
+  group_by(algorithm, n) %>%
+  summarise(`edge distance` = mean(edge_dist)) %>%
+  ggplot(aes(n, `edge distance`, color = algorithm)) + geom_line(size = 1.5) + scale_x_continuous(breaks = samples) +
+  theme_bw() + theme(
+    panel.grid = element_blank(), text = element_text(size = 20),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+```
+
+We can see that the algorithm performance is comparable up to around 27360 observations, after which *mmhc* and *rsmax2* flatten out while *hc* and *tabu* approach perfect estimation of the DAG skeleton.
+
+Below we can see the average simulation results for the Hamming distance measure:
+
+```{r}
+dag_accuracy %>%
+  group_by(algorithm, n) %>%
+  summarise(`Hamming distance` = mean(hamming_dist)) %>%
+  ggplot(aes(n, `Hamming distance`, color = algorithm)) + geom_line(size = 1.5) + scale_x_continuous(breaks = samples) +
+  theme_bw() + theme(
+    panel.grid = element_blank(), text = element_text(size = 20),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+```
+
+We can see that pretty fast all algorithms hit a performance plateau at around 6.
+
+When it comes to Structural Intervention Distance things look even worse:
+
+```{r}
+dag_accuracy %>%
+  group_by(algorithm, n) %>%
+  summarise(SID = mean(sid)) %>%
+  ggplot(aes(n, SID, color = algorithm)) + geom_line(size = 1.5) + scale_x_continuous(breaks = samples) +
+  theme_bw() + theme(
+    panel.grid = element_blank(), text = element_text(size = 20),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+```
+
+Let's revisit that last one with error bars just for mmhc:
+
+```{r}
+dag_accuracy %>%
+  filter(algorithm == "mmhc") %>%
+  group_by(n) %>%
+  summarise(SID = mean(sid), lower = quantile(sid, 0.05), upper = quantile(sid, 0.95)) %>%
+  ggplot(aes(n, SID)) + geom_line(size = 1.5) + scale_x_continuous(breaks = samples) +
+  geom_errorbar(aes(ymin = lower, ymax = upper)) +
+  theme_bw() + theme(
+    panel.grid = element_blank(), text = element_text(size = 20),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+```
+
+We can see that the performance is essentially unchanged across different sample sizes (all confidence intervals overlap).
+
+To get a sense of what different SID scores mean, we can calculate the probability of finding the correct adjustment set given a random selection of a treatment and control pair using the following equation:
+
+$$P(\text{correct adj set)} = 1 - \frac{SID}{\#\{\text{possible treatment - exposure pairs}\}}$$
+In our case given there are 8 nodes we have $\#\{\text{possible treatment - exposure pairs}\} = 8 \cdot 7 = 56$.
+
+Below is the resulting graph:
+
+```{r}
+dag_accuracy %>%
+  group_by(algorithm, n) %>%
+  summarise(p_correct_adj_set = 1 - mean(sid) / 56) %>%
+  ggplot(aes(n, p_correct_adj_set, color = algorithm)) + geom_line(size = 1.5) + scale_x_continuous(breaks = samples) +
+  theme_bw() + theme(
+    panel.grid = element_blank(), text = element_text(size = 20),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)
+  )
+```
+
+Pretty abysmal.
+
+# Summary
+
+While all algorithms converge on the correct DAG skeleton as the sample size increases, none of them is able to orient the edges correctly. So at least for the algorithms surveyed, benchmarked on our specific simulated dataset it would seem automatic DAG learning isn't a very reliable way to find the correct adjustment set.
+
+# All is lost?
+
+Despair not! For in my next blog post I'll introduce a small package I've written to address the issue of DAG edge orientation.
+

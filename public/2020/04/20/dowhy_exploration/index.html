@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>dowhy library exploration - Just be-cause</title>
+<meta property="og:title" content="dowhy library exploration - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">7 min read</span>
+    
+
+    <h1 class="article-title">dowhy library exploration</h1>
+
+    
+    <span class="article-date">2020-04-20</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p><img src="/post/dowhy_exploration_files/reticulated_python.png" width="600" height="300" /></p>
+<p>It is not often that I find myself thinking “man, I wish we had in R that cool python library!”. That is however the case with the <a href="https://microsoft.github.io/dowhy/"><em>dowhy</em></a> library which “provides a unified interface for causal inference methods and automatically tests many assumptions, thus making inference accessible to non-experts”.</p>
+<p>Luckily enough though, the awesome folks at Rstudio have written the <a href="https://rstudio.github.io/reticulate/"><em>reticulate</em></a> package just for that sort of occasion: It “provides a comprehensive set of tools for interoperability between Python and R”.</p>
+<p>In this post I’ll set about exploring the <em>dowhy</em> library while never leaving my Rstudio IDE or even writing python code!</p>
+<p>Below we set up a python virtual environment and install the <em>dowhy</em> dependencies:</p>
+<pre class="r"><code># create a new environment
+virtualenv_create(&quot;r-reticulate&quot;)
+
+# install python packages into virtualenv
+virtualenv_install(&quot;r-reticulate&quot;, c(&quot;numpy&quot;, &quot;scipy&quot;, &quot;scikit-learn&quot;, &quot;pandas&quot;, &quot;dowhy&quot;))</code></pre>
+<p>Be sure to use python 3+. If you’re using windows you are out of luck as these support conda environments only and I’m not sure conda support <em>dowhy</em>.</p>
+<p>Next, we import the dowhy module right into our R session!</p>
+<pre class="r"><code>dowhy &lt;- import(&quot;dowhy&quot;)</code></pre>
+<p>Now let’s reproduce the first <a href="https://microsoft.github.io/dowhy/example_notebooks/dowhy_simple_example.html">simple example</a> from the <em>dowhy</em> site.</p>
+<p>For simplicity, we simulate a dataset with linear relationships between common causes and treatment, and common causes and outcome.</p>
+<p>Beta is the true causal effect and is equal to 10. Below we generate the linear dataset:</p>
+<pre class="r"><code>data &lt;- dowhy$datasets$linear_dataset(
+  beta = 10L,
+  num_common_causes = 5L,
+  num_instruments = 2L,
+  num_effect_modifiers = 1L,
+  num_samples = 10000L,
+  treatment_is_binary = T
+)
+df_r &lt;- py_to_r(data[[&quot;df&quot;]]) # to be used later</code></pre>
+<p>Below we can see the first few rows:</p>
+<pre class="r"><code>data[&quot;df&quot;]$df$head() %&gt;% pandoc.table(split.tables = Inf)</code></pre>
+<table>
+<colgroup>
+<col width="11%" />
+<col width="5%" />
+<col width="10%" />
+<col width="11%" />
+<col width="11%" />
+<col width="11%" />
+<col width="11%" />
+<col width="11%" />
+<col width="7%" />
+<col width="8%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">X0</th>
+<th align="center">Z0</th>
+<th align="center">Z1</th>
+<th align="center">W0</th>
+<th align="center">W1</th>
+<th align="center">W2</th>
+<th align="center">W3</th>
+<th align="center">W4</th>
+<th align="center">v0</th>
+<th align="center">y</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">0.4349</td>
+<td align="center">0</td>
+<td align="center">0.6183</td>
+<td align="center">-1.193</td>
+<td align="center">2.58</td>
+<td align="center">0.824</td>
+<td align="center">2.392</td>
+<td align="center">1.732</td>
+<td align="center">TRUE</td>
+<td align="center">23.05</td>
+</tr>
+<tr class="even">
+<td align="center">-0.9587</td>
+<td align="center">1</td>
+<td align="center">0.3943</td>
+<td align="center">0.3835</td>
+<td align="center">0.371</td>
+<td align="center">-1.838</td>
+<td align="center">1.835</td>
+<td align="center">1.867</td>
+<td align="center">TRUE</td>
+<td align="center">11.66</td>
+</tr>
+<tr class="odd">
+<td align="center">-0.986</td>
+<td align="center">1</td>
+<td align="center">0.8709</td>
+<td align="center">-0.0708</td>
+<td align="center">-0.3716</td>
+<td align="center">-0.4343</td>
+<td align="center">0.2224</td>
+<td align="center">1.561</td>
+<td align="center">TRUE</td>
+<td align="center">9.258</td>
+</tr>
+<tr class="even">
+<td align="center">0.1813</td>
+<td align="center">0</td>
+<td align="center">0.2285</td>
+<td align="center">0.3961</td>
+<td align="center">0.1993</td>
+<td align="center">0.3843</td>
+<td align="center">-0.2072</td>
+<td align="center">-0.6096</td>
+<td align="center">TRUE</td>
+<td align="center">12.79</td>
+</tr>
+<tr class="odd">
+<td align="center">-0.9915</td>
+<td align="center">0</td>
+<td align="center">0.4394</td>
+<td align="center">0.6585</td>
+<td align="center">-0.5755</td>
+<td align="center">0.2262</td>
+<td align="center">1.332</td>
+<td align="center">0.365</td>
+<td align="center">TRUE</td>
+<td align="center">15.58</td>
+</tr>
+</tbody>
+</table>
+<p>We are interested with estimating the causal effect of <span class="math inline">\(v0\)</span> (a binary treatment) on <span class="math inline">\(y\)</span> (10 in this case). The <em>dowhy</em> library streamlines the process of estimating and validating the causal estimate by introducing a flow consisting of 4 key steps. The first is enumerating our assumed causal model, as encoded by a DAG.</p>
+<div id="enumerate-the-assumed-causal-model" class="section level1">
+<h1>1) Enumerate the assumed causal model</h1>
+<p>The above data object contains the underlying DAG representation. I’ve found that converting dot graphs to dagitty format is pretty straight forward and we’ll use that to plot the graph:</p>
+<pre class="r"><code>dagitty_graph &lt;- data[[&quot;dot_graph&quot;]]
+dagitty_graph &lt;- gsub(&quot;digraph&quot;, &quot;dag&quot;, dagitty_graph)
+dagitty_graph &lt;- dagitty(dagitty_graph)
+# let&#39;s arrange the nodes to conform with what is shown in the dowhy example
+coordinates(dagitty_graph) &lt;- list(
+  x = c(
+    U = 0, W0 = 1, W1 = 2, W2 = 3, W3 = 6, W4 = 7,
+    X0 = 6.5, Z0 = 4, Z1 = 5, v0 = 3.5, y = 3
+  ),
+  y = c(
+    U = 0, W0 = 0, W1 = 0, W2 = 0, W3 = 0, W4 = 0,
+    X0 = -1, Z0 = 0, Z1 = 0, v0 = -1, y = -2
+  )
+)
+
+ggdag(tidy_dagitty(dagitty_graph)) + theme_dag_blank() + 
+  annotate(geom = &quot;text&quot;, x = 0, y = 0.3, label = &quot;Unobserved \n confounders&quot;)</code></pre>
+<p><img src="/post/dowhy_exploration_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+<p>We enumerate the causal model using the following code:</p>
+<pre class="r"><code>model &lt;- dowhy$CausalModel(
+  data = data[[&quot;df&quot;]],
+  treatment = data[[&quot;treatment_name&quot;]],
+  outcome = data[[&quot;outcome_name&quot;]],
+  graph = data[[&quot;gml_graph&quot;]]
+)</code></pre>
+</div>
+<div id="enumerate-identification-strategies" class="section level1">
+<h1>2) Enumerate identification strategies</h1>
+<p>The next step is enumerating the identification strategies available given the above graph:</p>
+<pre class="r"><code>identified_estimand &lt;- model$identify_effect(proceed_when_unidentifiable = T)
+
+print(identified_estimand)</code></pre>
+<pre><code>## Estimand type: nonparametric-ate
+## ### Estimand : 1
+## Estimand name: backdoor
+## Estimand expression:
+##   d                                 
+## ─────(Expectation(y|W3,W4,W1,W2,W0))
+## d[v₀]                               
+## Estimand assumption 1, Unconfoundedness: If U→{v0} and U→y then P(y|v0,W3,W4,W1,W2,W0,U) = P(y|v0,W3,W4,W1,W2,W0)
+## ### Estimand : 2
+## Estimand name: iv
+## Estimand expression:
+## Expectation(Derivative(y, [Z1, Z0])*Derivative([v0], [Z1, Z0])**(-1))
+## Estimand assumption 1, As-if-random: If U→→y then ¬(U →→{Z1,Z0})
+## Estimand assumption 2, Exclusion: If we remove {Z1,Z0}→{v0}, then ¬({Z1,Z0}→y)</code></pre>
+<p>We can see that there are 2 possible ways of estimating the causal effect: Either using the backdoor criteria or with instrument variables (IV).</p>
+<p>We can really see how <em>dowhy</em> does a great job at making causal discovery transparent and explicit in each step of the process.</p>
+</div>
+<div id="estimate-the-causal-effect" class="section level1">
+<h1>3) Estimate the causal effect</h1>
+<p>Next up is doing the actual estimation.</p>
+<p>We’ll first try the IV estimand:</p>
+<pre class="r"><code>causal_estimate &lt;- model$estimate_effect(
+  identified_estimand = identified_estimand,
+  method_name = &quot;iv.instrumental_variable&quot;
+)
+
+print(paste0(&quot;Causal Estimate is &quot;, causal_estimate$value))</code></pre>
+<pre><code>## [1] &quot;Causal Estimate is 9.64967493839487&quot;</code></pre>
+<p>Next, let’s try the backdoor estimand, using propensity score stratification:</p>
+<pre class="r"><code>causal_estimate &lt;- model$estimate_effect(
+  identified_estimand = identified_estimand,
+  method_name = &quot;backdoor.propensity_score_stratification&quot;
+)
+
+print(paste0(&quot;Causal Estimate is &quot;, causal_estimate$value))</code></pre>
+<pre><code>## [1] &quot;Causal Estimate is 10.1306174998784&quot;</code></pre>
+</div>
+<div id="validate-estimated-causal-effect" class="section level1">
+<h1>4) Validate estimated causal effect</h1>
+<p>The last step consists of analyzing the level of confidence we have in the estimated causal effect. We’ll proceed with the backdoor estimate.</p>
+<p>Let’s start by adding a random (observed) confounder:</p>
+<pre class="r"><code>res_random &lt;- model$refute_estimate(
+  estimand = identified_estimand,
+  estimate = causal_estimate,
+  method_name = &quot;random_common_cause&quot;
+)
+
+print(res_random)</code></pre>
+<pre><code>## Refute: Add a Random Common Cause
+## Estimated effect:(10.130617499878428,)
+## New effect:(10.12114905599205,)</code></pre>
+<p>We can see the result is pretty stable. This means our sample size (10,000) is probably large enough to accommodate further confounders without loss of accuracy.</p>
+<p>Next, let’s see how adding an unobserved confounder can change our estimate. In the code below the <code>effect_strength_on_treatment</code> argument denotes the probability of the confounder flipping the treatment from 0 to 1 (or vice verca). The <code>effect_strength_on_outcome</code> denotes the linear coefficient of the confounder on the outcome.</p>
+<pre class="r"><code>res_unobserved &lt;- model$refute_estimate(
+  estimand = identified_estimand,
+  estimate = causal_estimate,
+  method_name = &quot;add_unobserved_common_cause&quot;,
+  confounders_effect_on_treatment = &quot;binary_flip&quot;,
+  confounders_effect_on_outcome = &quot;linear&quot;,
+  effect_strength_on_treatment = 0.01,
+  effect_strength_on_outcome = 0.02
+)
+
+print(res_unobserved)</code></pre>
+<pre><code>## Refute: Add an Unobserved Common Cause
+## Estimated effect:(10.130617499878428,)
+## New effect:(9.452502128579503,)</code></pre>
+<p>When using the effect strength values given in the example the effect on our estimate seems modest. Let’s try adding a stronger confounder:</p>
+<pre class="r"><code>res_unobserved &lt;- model$refute_estimate(
+  estimand = identified_estimand,
+  estimate = causal_estimate,
+  method_name = &quot;add_unobserved_common_cause&quot;,
+  confounders_effect_on_treatment = &quot;binary_flip&quot;,
+  confounders_effect_on_outcome = &quot;linear&quot;,
+  effect_strength_on_treatment = 0.05,
+  effect_strength_on_outcome = 1
+)
+
+print(res_unobserved)</code></pre>
+<pre><code>## Refute: Add an Unobserved Common Cause
+## Estimated effect:(10.130617499878428,)
+## New effect:(5.444774309294754,)</code></pre>
+<p>It’s pretty surprising to see how bad our estimate would be given a single un-observed confounder with what I’d consider mild confounding effect.</p>
+<p>What’s weirder is that the confounder can affect only the treatment (setting <code>effect_strength_on_outcome = 0</code>, essentially making it a non confounder) and still destabilize the estimate in pretty much the same way:</p>
+<pre class="r"><code>res_unobserved &lt;- model$refute_estimate(
+  estimand = identified_estimand,
+  estimate = causal_estimate,
+  method_name = &quot;add_unobserved_common_cause&quot;,
+  confounders_effect_on_treatment = &quot;binary_flip&quot;,
+  confounders_effect_on_outcome = &quot;linear&quot;,
+  effect_strength_on_treatment = 0.05,
+  effect_strength_on_outcome = 0
+)
+
+print(res_unobserved)</code></pre>
+<pre><code>## Refute: Add an Unobserved Common Cause
+## Estimated effect:(10.130617499878428,)
+## New effect:(5.67025809685905,)</code></pre>
+<p>I’ll probably need to research the internal mechanics a bit more to understand how that’s possible.</p>
+<p>Let’s try permuting the treatment (making it effectively a placebo) and see how our estimate changes:</p>
+<pre class="r"><code>res_placebo &lt;- model$refute_estimate(
+  estimand = identified_estimand,
+  estimate = causal_estimate,
+  method_name = &quot;placebo_treatment_refuter&quot;,
+  placebo_type = &quot;permute&quot;
+)
+
+print(res_placebo)</code></pre>
+<pre><code>## Refute: Use a Placebo Treatment
+## Estimated effect:(10.130617499878428,)
+## New effect:(0.1424237753920382,)</code></pre>
+<p>We can see that the estimated effect is essentially 0, which is what we’d like to see (this means our estimator doesn’t catch random noise as treatment effect).</p>
+<p>Finally, let’s see how sensitive is our estimate to removal of 10% of the observations:</p>
+<pre class="r"><code>res_subset &lt;- model$refute_estimate(
+  estimand = identified_estimand,
+  estimate = causal_estimate,
+  method_name = &quot;data_subset_refuter&quot;,
+  subset_fraction = 0.9,
+  random_seed = 1L
+)
+
+print(res_subset)</code></pre>
+<pre><code>## Refute: Use a subset of data
+## Estimated effect:(10.130617499878428,)
+## New effect:(10.05344937871124,)</code></pre>
+<p>Pretty stable. Thinking about this a bit more I believe this is very similar to using bootstrap sampling to evaluate the estimate variability. Let’s implement bootstrap sampling for variability estimation just for fun:</p>
+<pre class="r"><code>if (!&quot;res.rds&quot; %in% list.files(&quot;../../../&quot;)) {
+  set.seed(1)
+  M &lt;- 100
+  res &lt;- vector(length = M)
+
+  for (m in 1:M) {
+    bootstarpped_data &lt;- df_r[sample.int(
+      n = nrow(df_r),
+      nrow(df_r), replace = T
+    ), ]
+
+    dat_m &lt;- r_to_py(bootstarpped_data)
+
+    model_m &lt;- dowhy$CausalModel(
+      data = dat_m,
+      treatment = data[[&quot;treatment_name&quot;]],
+      outcome = data[[&quot;outcome_name&quot;]],
+      graph = data[[&quot;gml_graph&quot;]]
+    )
+    identified_estimand &lt;- model_m$identify_effect(
+      proceed_when_unidentifiable = T
+    )
+    causal_estimate &lt;- model_m$estimate_effect(
+      identified_estimand = identified_estimand,
+      method_name = &quot;backdoor.propensity_score_stratification&quot;
+    )
+    res[m] &lt;- causal_estimate$value
+  }
+  saveRDS(res, &quot;../../../res.rds&quot;)
+} else {
+  res &lt;- readRDS(&quot;../../../res.rds&quot;)
+}
+
+res_sd &lt;- round(sd(res), 4)
+
+data.frame(causal_estimate = res) %&gt;%
+  ggplot(aes(causal_estimate)) + geom_histogram(bins = 10) +
+  annotate(
+    geom = &quot;text&quot;, x = mean(res), y = 5,
+    label = paste0(&quot;SD = &quot;, res_sd),
+    color = &quot;red&quot;, size = 6
+  )</code></pre>
+<p><img src="/post/dowhy_exploration_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>Oddly enough it would seem the estimate is pretty far off from 10.</p>
+<p>The code above demonstrates how <em>reticulate</em> enables seamless simultaneous coding in Python and R.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>python on Just be-cause</title>
+    <link>https://iyarlin.github.io/tags/python/</link>
+    <description>Recent content in python on Just be-cause</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 02 May 2021 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Don&#39;t be fooled by the hype python&#39;s got</title>
+      <link>https://iyarlin.github.io/2021/05/02/dont_be_fooled_by_the_hype/</link>
+      <pubDate>Sun, 02 May 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2021/05/02/dont_be_fooled_by_the_hype/</guid>
+      <description>R still R still is the tool you want We all know python popularity among DS practitioners has soared over the past few years, signaling both aspiring DS on the one hand and organizations on the other to favor python over R in a snowballing dynamic.
+I’m writing this post to help turn the tide and let us all keep writing in the language we love and are most productive with.</description>
+    </item>
+    
+    <item>
+      <title>dowhy library exploration</title>
+      <link>https://iyarlin.github.io/2020/04/20/dowhy_exploration/</link>
+      <pubDate>Mon, 20 Apr 2020 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2020/04/20/dowhy_exploration/</guid>
+      <description>It is not often that I find myself thinking “man, I wish we had in R that cool python library!”. That is however the case with the dowhy library which “provides a unified interface for causal inference methods and automatically tests many assumptions, thus making inference accessible to non-experts”.
+Luckily enough though, the awesome folks at Rstudio have written the reticulate package just for that sort of occasion: It “provides a comprehensive set of tools for interoperability between Python and R”.</description>
+    </item>
+    
+  </channel>
+</rss>

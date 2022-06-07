@@ -1,0 +1,331 @@
+---
+title: 'dtplyr speed benchmarks'
+author: Iyar Lin
+date: '2020-05-26'
+slug: dtplyr_benchmarks
+categories:
+  - R
+tags: [R, dtplyr, benchmark, simulation]
+comments: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
+set.seed(1)
+options(scipen = 999)
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(char = c(
+  "tidyverse", # best thing that ever happend to me
+  "dtplyr", # r interface to python
+  "pander", # pretty table rendering
+  "data.table"
+))
+```
+
+![](/post/tdplyr_benchmarking_files/race_cars.jpg){width=450px height=300px}
+
+R has many great tools for data wrangling. Two of those are the *dplyr* and *data.table* packages. When people wonder which one should they learn it is often argued that *dplyr* is considerably slower compared with *data.table*.  
+
+Granted, *data.table* is blazing fast, but I personally find the syntax hard and un-intuitive and the speed difference doesn't make much of a difference in most use cases I encountered.
+
+The only frequent scenario where I've experienced a significant performance gap is when doing operations over a very large number of groups. This can happen when for example working with customer data, where each row describes a touch point or transaction and one is interested with calculating the number of rows per customer, monetary value of all transactions per customer etc. 
+
+Recently Rstudio [released](https://www.tidyverse.org/blog/2019/11/dtplyr-1-0-0/) *dtplyr* package version 1.0.0 which provides a *data.table* backend for *dplyr*.
+
+Using *dtplyr* requires learning almost no additional code. One initiates a *data.table* sequence using the `lazy_dt` function, after which regular *dplyr* code is written. Execution of the code is done only when calling `as_tibble` (or `as.data.frame` etc).
+
+So for example a simple pipeline utilizing *dtplyr* for many group operations would look like:
+
+```{r}
+mtcars %>%
+  lazy_dt() %>%
+  filter(wt < 5) %>%
+  mutate(l100k = 235.21 / mpg) %>% # liters / 100 km
+  group_by(cyl) %>%
+  summarise(l100k = mean(l100k))
+```
+
+The only caveat is, as with all other *dbplyr* like interfaces, that some of the more complex operations might not be supported. 
+
+Interestingly enough, I wasn't able to find any bench-marking for *dtplyr* other than a walled piece on Medium. So I decided to go ahead and run a quick benchmark test myself. 
+
+In this post I'll check by how much does *dtplyr* improve on *dplyr* and whether it's performance is close enough to *data.table* to be considered a valid alternative.
+
+To that end, I'll reproduce some of the [benchmarking](https://github.com/Rdatatable/data.table/wiki/Benchmarks-%3A-Grouping) done by data.table author Matt Dowle back at Dec 2018.
+
+The bench-marking consist of:
+
+- 5 simple queries: large groups and small groups on different columns of different types. Similar to what a data analyst might do in practice; i.e., various ad hoc aggregations as the data is explored and investigated.  
+- Each package is tested separately in its own fresh session. To that end I've restarted my machine before running the benchmark code for every package.  
+- Each query is repeated once more, immediately. This is to isolate cache effects and confirm the first timing. The first and second total elapsed times are plotted.
+
+My analysis will diverge from the original in the following respects:
+
+1. I'll compare *data.table*, *dtyplr* and *dplyr*. I'll also check how starting a *dtplyr* pipe with a `data.table` rather than a `data.frame` affects performance (dubbed *dt_dtplyr* below)     
+1. I'll use my personal laptop instead of spinning up a virtual machine  
+1. I'm generating a much smaller dataset (~4.9 Gb). I think that is representative of some of the larger datasets I've worked with in-memory (for larger datasets I usually switch to Spark).
+
+Other than that the code is mostly the same.
+
+<details><summary>data.table benchmark code</summary>
+<p>
+
+```{r, eval=F}
+require(data.table)
+N <- 1e8
+K <- 100
+set.seed(1)
+DT <- data.table(
+  id1 = sample(sprintf("id%03d", 1:K), N, TRUE), # large groups (char)
+  id2 = sample(sprintf("id%03d", 1:K), N, TRUE), # large groups (char)
+  id3 = sample(sprintf("id%010d", 1:(N / K)), N, TRUE), # small groups (char)
+  id4 = sample(K, N, TRUE), # large groups (int)
+  id5 = sample(K, N, TRUE), # large groups (int)
+  id6 = sample(N / K, N, TRUE), # small groups (int)
+  v1 = sample(5, N, TRUE), # int in range [1,5]
+  v2 = sample(5, N, TRUE), # int in range [1,5]
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE) # numeric e.g. 23.5749
+)
+
+q1a <- system.time(DT[, sum(v1), keyby = id1])[3]
+q1b <- system.time(DT[, sum(v1), keyby = id1])[3]
+q2a <- system.time(DT[, sum(v1), keyby = "id1,id2"])[3]
+q2b <- system.time(DT[, sum(v1), keyby = "id1,id2"])[3]
+q3a <- system.time(DT[, list(sum(v1), mean(v3)), keyby = id3])[3]
+q3b <- system.time(DT[, list(sum(v1), mean(v3)), keyby = id3])[3]
+q4a <- system.time(DT[, lapply(.SD, mean), keyby = id4, .SDcols = 7:9])[3]
+q4b <- system.time(DT[, lapply(.SD, mean), keyby = id4, .SDcols = 7:9])[3]
+q5a <- system.time(DT[, lapply(.SD, sum), keyby = id6, .SDcols = 7:9])[3]
+q5b <- system.time(DT[, lapply(.SD, sum), keyby = id6, .SDcols = 7:9])[3]
+data_table_results <- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)
+```
+
+</p>
+</details>
+
+
+<details><summary>dtplyr benchmark code</summary>
+<p>
+
+```{r, eval=F}
+require(dplyr)
+require(dtplyr)
+N <- 1e8
+K <- 100
+set.seed(1)
+DF <- data.frame(
+  stringsAsFactors = FALSE,
+  id1 = sample(sprintf("id%03d", 1:K), N, TRUE),
+  id2 = sample(sprintf("id%03d", 1:K), N, TRUE),
+  id3 = sample(sprintf("id%010d", 1:(N / K)), N, TRUE),
+  id4 = sample(K, N, TRUE),
+  id5 = sample(K, N, TRUE),
+  id6 = sample(N / K, N, TRUE),
+  v1 = sample(5, N, TRUE),
+  v2 = sample(5, N, TRUE),
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE)
+)
+
+q1a <- system.time(DF %>% lazy_dt() %>% group_by(id1) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q1b <- system.time(DF %>% lazy_dt() %>% group_by(id1) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q2a <- system.time(DF %>% lazy_dt() %>% group_by(id1, id2) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q2b <- system.time(DF %>% lazy_dt() %>% group_by(id1, id2) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q3a <- system.time(DF %>% lazy_dt() %>% group_by(id3) %>% summarise(sum(v1), mean(v3)) %>% as_tibble())[3]
+q3b <- system.time(DF %>% lazy_dt() %>% group_by(id3) %>%
+  summarise(sum(v1), mean(v3)) %>% as_tibble())[3]
+q4a <- system.time(DF %>% lazy_dt() %>% group_by(id4) %>%
+  summarise_at(vars(v1:v3), mean) %>% as_tibble())[3]
+q4b <- system.time(DF %>% lazy_dt() %>% group_by(id4) %>%
+  summarise_at(vars(v1:v3), mean) %>% as_tibble())[3]
+q5a <- system.time(DF %>% lazy_dt() %>% group_by(id6) %>%
+  summarise_at(vars(v1:v3), sum) %>% as_tibble())[3]
+q5b <- system.time(DF %>% lazy_dt() %>% group_by(id6) %>%
+  summarise_at(vars(v1:v3), sum) %>% as_tibble())[3]
+
+dtplyr_results <- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)
+```
+
+</p>
+</details>
+
+<details><summary>dt_dtplyr benchmark code</summary>
+<p>
+
+```{r, eval=F}
+require(dplyr)
+require(dtplyr)
+library(data.table)
+N <- 1e8
+K <- 100
+set.seed(1)
+DF <- data.frame(
+  stringsAsFactors = FALSE,
+  id1 = sample(sprintf("id%03d", 1:K), N, TRUE),
+  id2 = sample(sprintf("id%03d", 1:K), N, TRUE),
+  id3 = sample(sprintf("id%010d", 1:(N / K)), N, TRUE),
+  id4 = sample(K, N, TRUE),
+  id5 = sample(K, N, TRUE),
+  id6 = sample(N / K, N, TRUE),
+  v1 = sample(5, N, TRUE),
+  v2 = sample(5, N, TRUE),
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE)
+)
+
+DF <- as.data.table(DF)
+
+q1a <- system.time(DF %>% lazy_dt() %>% group_by(id1) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q1b <- system.time(DF %>% lazy_dt() %>% group_by(id1) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q2a <- system.time(DF %>% lazy_dt() %>% group_by(id1, id2) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q2b <- system.time(DF %>% lazy_dt() %>% group_by(id1, id2) %>%
+  summarise(sum(v1)) %>% as_tibble())[3]
+q3a <- system.time(DF %>% lazy_dt() %>% group_by(id3) %>% summarise(sum(v1), mean(v3)) %>% as_tibble())[3]
+q3b <- system.time(DF %>% lazy_dt() %>% group_by(id3) %>%
+  summarise(sum(v1), mean(v3)) %>% as_tibble())[3]
+q4a <- system.time(DF %>% lazy_dt() %>% group_by(id4) %>%
+  summarise_at(vars(v1:v3), mean) %>% as_tibble())[3]
+q4b <- system.time(DF %>% lazy_dt() %>% group_by(id4) %>%
+  summarise_at(vars(v1:v3), mean) %>% as_tibble())[3]
+q5a <- system.time(DF %>% lazy_dt() %>% group_by(id6) %>%
+  summarise_at(vars(v1:v3), sum) %>% as_tibble())[3]
+q5b <- system.time(DF %>% lazy_dt() %>% group_by(id6) %>%
+  summarise_at(vars(v1:v3), sum) %>% as_tibble())[3]
+
+dt_dtplyr_results <- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)
+```
+
+</p>
+</details>
+
+
+<details><summary>dplyr benchmark code</summary>
+<p>
+
+```{r, eval=F}
+library(dplyr)
+N <- 1e8
+K <- 100
+set.seed(1)
+DF <- data.frame(
+  stringsAsFactors = FALSE,
+  id1 = sample(sprintf("id%03d", 1:K), N, TRUE),
+  id2 = sample(sprintf("id%03d", 1:K), N, TRUE),
+  id3 = sample(sprintf("id%010d", 1:(N / K)), N, TRUE),
+  id4 = sample(K, N, TRUE),
+  id5 = sample(K, N, TRUE),
+  id6 = sample(N / K, N, TRUE),
+  v1 = sample(5, N, TRUE),
+  v2 = sample(5, N, TRUE),
+  v3 = sample(round(runif(100, max = 100), 4), N, TRUE)
+)
+
+q1a <- system.time(DF %>% group_by(id1) %>% summarise(sum(v1)) %>% as_tibble())[3]
+q1b <- system.time(DF %>% group_by(id1) %>% summarise(sum(v1)) %>% as_tibble())[3]
+q2a <- system.time(DF %>% group_by(id1, id2) %>% summarise(sum(v1)) %>% as_tibble())[3]
+q2b <- system.time(DF %>% group_by(id1, id2) %>% summarise(sum(v1)) %>% as_tibble())[3]
+q3a <- system.time(DF %>% group_by(id3) %>% summarise(sum(v1), mean(v3)) %>% as_tibble())[3]
+q3b <- system.time(DF %>% group_by(id3) %>%
+  summarise(sum(v1), mean(v3)) %>% as_tibble())[3]
+q4a <- system.time(DF %>% group_by(id4) %>%
+  summarise_at(vars(v1:v3), mean) %>% as_tibble())[3]
+q4b <- system.time(DF %>% group_by(id4) %>%
+  summarise_at(vars(v1:v3), mean) %>% as_tibble())[3]
+q5a <- system.time(DF %>% group_by(id6) %>%
+  summarise_at(vars(v1:v3), sum) %>% as_tibble())[3]
+q5b <- system.time(DF %>% group_by(id6) %>%
+  summarise_at(vars(v1:v3), sum) %>% as_tibble())[3]
+
+dplyr_results <- list(
+  q1a = q1a, q1b = q1b,
+  q2a = q2a, q2b = q2b,
+  q3a = q3a, q3b = q3b,
+  q4a = q4a, q4b = q4b,
+  q5a = q5a, q5b = q5b
+)
+```
+
+</p>
+</details>
+
+```{r, echo=F}
+data_table_results <- readRDS("../../../data_table_results.rds")
+dtplyr_results <- readRDS("../../../dtplyr_results.rds")
+dt_dtplyr_results <- readRDS("../../../dt_dtplyr_results.rds")
+dplyr_results <- readRDS("../../../dplyr_results.rds")
+
+results <- data.frame(
+  package = rep(c("data.table", "dtplyr", "dt_dtplyr", "dplyr"), each = 10),
+  query = rep(rep(c(
+    "Test 1: 100 ad hoc groups of 1,000,000 rows; result 100 X 2",
+    "Test 2: 10,000 ad hoc groups of 10,000 rows; result 10,000 X 3",
+    "Test 3: 1,000,000 ad hoc groups of 100 rows; result 1,000,000 X 3",
+    "Test 4: 100 ad hoc groups of 1,000,000 rows; result 100 X 4",
+    "Test 5: 1,000,000 ad hoc groups of 100 rows; result 1,000,000 X 4"
+  ),
+  each = 2
+  ), 4),
+  run = rep(rep(1:2, 5), 4),
+  time = c(
+    unlist(data_table_results), unlist(dtplyr_results),
+    unlist(dt_dtplyr_results), unlist(dplyr_results)
+  )
+)
+
+first_run <- results %>% filter(run == 1)
+second_run <- results %>% filter(run == 2)
+```
+
+```{r, echo=F, fig.width=5}
+first_run %>% ggplot(aes(time, package, fill = package)) +
+  geom_col(width = 0.5) +
+  geom_col(data = second_run, alpha = 0.5) +
+  facet_wrap(facets = vars(query), strip.position = "top", ncol = 1) +
+  theme_bw() + xlab("Time elapsed (seconds)") +
+  theme(
+    axis.text.y = element_blank(),
+    strip.text = element_text(size = 6),
+    text = element_text(size = 20),
+    axis.title.y = element_blank(),
+    plot.title = element_text(size = 10),
+    axis.ticks.y = element_blank(),
+    panel.grid.major.y = element_blank()
+  ) +
+  ggtitle("Input table: 100,000,000 rows X 9 columns (4.9 Gb) - Random Order") +
+  scale_x_continuous(expand = c(0, 1.05))
+```
+
+We can see that using *dtplyr* improves the performance quite a bit, though still not as fast as *data.table*. It would seem however that most of the difference stems from the need to convert the `data.frame` object to a `data.table` one. That can be done once when reading in the file for example. Thus it would seem that ultimately the sacrifice in performance for the added benefit of tidy syntax (for those who dig tidy) isn't too bad. 
+
+Personally, I'm hooked on the tidyverse and the *dtplyr* package is just another reason to keep using it, even for operations over a large number of groups.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
