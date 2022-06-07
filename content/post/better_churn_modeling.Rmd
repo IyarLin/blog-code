@@ -106,7 +106,7 @@ and will be labeled as "churned" more often (50% of plan A vs 25% in plan B).
 We would thus wrongly conclude that plan A subscribers churn at a higher rate than 
 plan B subscribers.
 
-## Conlusion
+## Conclusion
 
 The bias illustrated above is very typical as cellphone plans are often introduced 
 one after the other. In the example above it can be see that on January 2022 plan 
