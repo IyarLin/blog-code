@@ -69,8 +69,9 @@
 
 
 <p><img src="/post/better_churn_modeling_files/leaky%20bucket.png" /></p>
-<p>First off - I’m excited to share this blog has earned me a position as senior data
-scientist at <a href="https://getloops.ai/">Loops</a> - a startup that builds an automated analytics platform for product and growth teams.</p>
+<p>First off - I’m excited to share this blog was instrumental in earning me a position
+as senior data scientist at <a href="https://getloops.ai/">Loops</a> - a startup that builds
+an automated analytics platform for product and growth teams.</p>
 <p>One of it’s primary selling points is the application of advanced causal inference methodologies to uncover opportunities from observational data.</p>
 <p>This happened a little over a year ago and during that time I’ve been quite busy developing causal inference methodologies for real world applications. Hence, I
 haven’t posted in a while. I hope I’ll go back to posting once every few months
@@ -78,7 +79,7 @@ from now on.</p>
 <p>So without further ado, let’s talk about better churn prediction.</p>
 <div id="to-churn-or-not-churn---what-is-the-real-question" class="section level2">
 <h2>To churn or not churn - what is the real question?</h2>
-<p>One of the main topics I’ve been working on through the years is churn. Churn reduction is appreciated as a top priority by most companies and correctly identifying it’s
+<p>One of the main topics I’ve been working on through the years is churn. Churn reduction is a top priority for many companies and correctly identifying it’s
 root causes can greatly improve their bottom line.</p>
 <p>Considering how well known and appreciated the churn problem is I’m always perplexed
 by how badly it is modeled in practice.</p>
@@ -88,7 +89,7 @@ readily available software and tutorials.</p>
 <p>I argue however that churn is not really a question of “who” will churn but rather of “when”.</p>
 <p>This is an important distinction for 2 reasons:</p>
 <ol style="list-style-type: decimal">
-<li>Asking “who” will churn leads to biased modeling choices as will be demonstrated below.<br />
+<li>Asking “who” will churn leads to biased modeling as will be demonstrated below.<br />
 </li>
 <li>In many cases a users’ value is highly dependent on how long he’ll stay subscribed.
 This can only be answered by asking “when” rather than “who”.</li>
@@ -100,22 +101,23 @@ This can only be answered by asking “when” rather than “who”.</li>
 until some point in time in which they decide to terminate their contract (aka churn).</p>
 <p>Eventually they’ll all churn: 30 years from now they will be either dead or use
 Holograms to communicate rather than a Cellphone.</p>
-<p>Let’s visualize how a subscribers’ journey looks like:</p>
+<p>Let’s visualize how typical subscribers’ journey looks like:</p>
 <p><img src="/post/better_churn_modeling_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
-<p>The first subscriber on the top started on plan A On June 2021 and churned
+<p>The first subscriber on the top started on plan A on June 2021 and churned
 on April 2022. The slashed line represents “Today” (the time the analysis is run)
 which is June 7th 2022.</p>
 <p>In the “who” question, users who have churned in the past (before “today”) are labeled as “churned” (<span class="math inline">\(y=1\)</span>) while those who churn in the future are labeled as “not churned” (<span class="math inline">\(y=0\)</span>) since they are still subscribed when we observe them “today”.</p>
 <p>We can see that users of plan A tend to take longer to churn (their lines are longer)
-but since they joined earlier then plan B subscribers they will be labeled as “churned” more often (50% of plan A vs 25% in plan B).</p>
-<p>So we would wrongly deduce that plan A subscribers churn at a higher rate than plan
-B subscribers.</p>
+but since they joined earlier than plan B subscribers they have more time to churn
+and will be labeled as “churned” more often (50% of plan A vs 25% in plan B).</p>
+<p>We would thus wrongly conclude that plan A subscribers churn at a higher rate than
+plan B subscribers.</p>
 </div>
 <div id="conlusion" class="section level2">
 <h2>Conlusion</h2>
-<p>This type of bias is very typical as cellphone plans are often introduced one
-after the other.. In the example above on January 2022 plan A was switched to plan
-B and we can see the resulting bias.</p>
+<p>The bias illustrated above is very typical as cellphone plans are often introduced
+one after the other. In the example above it can be see that on January 2022 plan
+A was switched to plan B.</p>
 <p>In the next few blog posts I’ll discuss how survival analysis deals with the bias
 demonstrated above and advanced use cases in churn prediction where survival analysis
 is crucial for better churn modeling.</p>
