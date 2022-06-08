@@ -15,4 +15,6 @@ Posts in this blog are also graciously hosted on [R-bloggers](https://www.r-blog
 
 This blog structure and layout are based on the "hello world" example website for the [**blogdown**](https://github.com/rstudio/blogdown) package.
 
+<p align="center">
 ![](/./about_files/portrait.png){width=400px height=400px}
+</p>
