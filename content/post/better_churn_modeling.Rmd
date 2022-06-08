@@ -1,11 +1,11 @@
 ---
 title: 'Better churn prediction'
 author: Iyar Lin
-date: '2022-06-07'
+date: '2022-06-08'
 slug: better_churn_modeling
 categories:
-  - ML
-tags: [ML, survival_analysis, methodology, churn]
+  - [R]
+tags: [ML, R, survival_analysis, classification, churn, simulation]
 comments: true
 ---
 
@@ -14,15 +14,17 @@ knitr::opts_chunk$set(echo = T, warning = F, message = F, cache = F)
 library(ggplot2)
 ```
 
-![](/post/better_churn_modeling_files/leaky bucket.png)
+![Image by <a href="https://pixabay.com/users/igrow-335413/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=392971">Mandy Klein</a> from <a href="https://pixabay.com/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=392971">Pixabay</a>](/post/better_churn_modeling_files/leaky bucket.jpg)
 
 First off - I'm excited to share this blog was instrumental in earning me a position 
 as senior data scientist at [Loops](https://getloops.ai/) - a startup that builds 
 an automated analytics platform for product and growth teams. 
 
-One of it's primary selling points is the application of advanced causal inference methodologies to uncover opportunities from observational data. 
+One of it's primary selling points is the application of advanced causal inference 
+methodologies to uncover opportunities from observational data. 
 
-This happened a little over a year ago and during that time I've been quite busy developing causal inference methodologies for real world applications. Hence, I
+This happened a little over a year ago and during that time I've been quite busy 
+developing causal inference methodologies for real world applications. Hence, I
 haven't posted in a while. I hope I'll go back to posting once every few months
 from now on.
 
@@ -30,15 +32,14 @@ So without further ado, let's talk about better churn prediction.
 
 ## To churn or not churn - what is the real question?
 
-One of the main topics I've been working on through the years is churn. Churn reduction is a top priority for many companies and correctly identifying it's 
-root causes can greatly improve their bottom line.
+One of the main topics I've been working on through the years is churn. Churn reduction 
+is a top priority for many companies and correctly identifying it's root causes can 
+greatly improve their bottom line.
 
-Considering how well known and appreciated the churn problem is I'm always perplexed
-by how badly it is modeled in practice. 
+Considering how well known and appreciated the churn problem is I'm often perplexed by how badly it is modeled in practice. 
 
 Churn is often formulated as a question of "who's most likely to churn?".
-This question naturally lends itself to classification modeling for which there's
-readily available software and tutorials.
+This question naturally lends itself to classification modeling.
 
 I argue however that churn is not really a question of "who" will churn but rather of "when".
 
@@ -56,7 +57,7 @@ until some point in time in which they decide to terminate their contract (aka c
 Eventually they'll all churn: 30 years from now they will be either dead or use 
 Holograms to communicate rather than a Cellphone. 
 
-Let's visualize how typical subscribers' journey looks like:
+Let's visualize how typical subscriptions look like:
 
 ```{r, echo=F}
 lifelines_plot <- data.frame(
@@ -81,39 +82,142 @@ ggplot(lifelines_plot, aes(time, id, color = plan)) +
   theme(
     axis.ticks.y = element_blank(), axis.title.y = element_blank(),
     axis.text.y = element_blank(), panel.grid.major.y = element_blank(),
-    panel.grid.minor.x = element_blank(), 
+    panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
     axis.text.x = element_text(angle = -45, vjust = 0),
     legend.key.size = unit(0.1, "npc"), legend.direction = "horizontal",
-    legend.position = "top"
+    legend.position = "top", text = element_text(size = 15)
   ) +
   scale_y_continuous(expand = expansion(add = 2)) +
-  geom_vline(xintercept = as.Date("2022-06-07"), lty = 2) +
-  scale_x_date(date_breaks = "1 months", date_labels = "%m-%y", name = "Month") + 
+  geom_vline(xintercept = as.Date("2022-06-08"), lty = 2) +
+  scale_x_date(date_breaks = "1 months", date_labels = "%m-%y", name = "Month") +
   annotate(x = as.Date("2022-07-01"), y = 9, geom = "text", label = "Today")
 ```
 
 The first subscriber on the top started on plan A on June 2021 and churned 
 on April 2022. The slashed line represents "Today" (the time the analysis is run) 
-which is June 7th 2022. 
+which is June 8th 2022. 
 
 In the "who" question, users who have churned in the past (before "today") are labeled as "churned" ($y=1$) while those who churn in the future are labeled as "not churned" ($y=0$) since they are still subscribed when we observe them "today".
 
-We can see that users of plan A tend to take longer to churn  (their lines are longer)
-but since they joined earlier than plan B subscribers they have more time to churn
+We can see that users of plan A tend to take longer to churn (their lines are longer). But since they joined earlier than plan B subscribers they have more time to churn 
 and will be labeled as "churned" more often (50% of plan A vs 25% in plan B).
 
 We would thus wrongly conclude that plan A subscribers churn at a higher rate than 
 plan B subscribers.
 
-## Conclusion
-
 The bias illustrated above is very typical as cellphone plans are often introduced 
-one after the other. In the example above it can be see that on January 2022 plan 
+in succession. In the example above it can be seen that on January 2022 plan 
 A was switched to plan B.
 
-In the next few blog posts I'll discuss how survival analysis deals with the bias
-demonstrated above and advanced use cases in churn prediction where survival analysis 
+## A small simulation study
+
+To drive the point home I'll conduct a tiny simulation analysis.
+
+We have a timeline that starts at 0. The time we observe the data and fit our model ("today") is 22. 
+
+The time a user started his subscription is drawn from a uniform distribution 
+$U~[0,20]$ if he's on plan A and $U~[20,22]$ if he's on plan B. 
+
+```{r}
+today <- 22
+Na <- 700
+Nb <- 300
+plan <- rep(c("A", "B"), time = c(Na, Nb))
+set.seed(1)
+join_time <- c(runif(Na, 0, 20), runif(Nb, 20, today))
+```
+
+Below we can see the average join time:
+
+```{r}
+tapply(join_time, plan, mean)
+```
+
+
+The time a user was subscribed before churning is distributed as Poisson 
+with $\lambda=4$ if he's on plan A and $\lambda=3$ if he's on plan B. 
+
+```{r}
+set.seed(1)
+time_to_churn <- c(rpois(Na, 4), rpois(Nb, 3))
+```
+
+Below we can see the average time to churn:
+
+```{r}
+tapply(time_to_churn, plan, mean)
+```
+
+
+The time a user churns is the time he joined + the time till he churned: 
+
+```{r}
+churn_time <- join_time + time_to_churn
+```
+
+If the churn time is greater than 22 (in the future from "today") we say he's not churned ($y=0$). 
+If that time is shorter than today we day he did churn ($y=1$).
+
+```{r}
+churned <- churn_time < today
+```
+
+Looking at raw churn rates we can see that users from plan A seem to churn much
+more:
+
+```{r}
+tapply(churned, plan, mean)
+```
+
+But we know users on plan B joined more recently so we'd might try to take that
+into account by fitting a logistic regression of churn vs plan and the time since a user joined. 
+
+Below we can see however that the bias is so strong that the model still tells us
+that being on plan B reduces the probability to churn:
+
+```{r}
+time_since_join <- today - join_time
+glm(churned ~ plan + time_since_join)
+```
+
+## What are we gonna do?
+
+![](/post/better_churn_modeling_files/jungle book.jpeg)
+
+Use survival analysis!
+
+To keep this post from getting too long I'll skip introducing what survival analysis 
+is and instead show how it handles the bias demonstrated above.
+
+One common model in the survival analysis arsenal is the "Accelerated failure time"
+model. It produces coefficients much like a logistic regression:
+
+```{r}
+library(survival)
+observed_time <- ifelse(churned, time_to_churn, today - join_time)
+# add a tiny amount (0.01) to observed_time to avoid observed_time = 0
+survregExp <- survreg(Surv(observed_time + 0.01, churned) ~ plan,
+  dist = "exponential"
+)
+coef(survregExp)
+```
+
+We interpret the coefficients as follows: Being on plan B reduces time to churn by
+20% ($1 - exp(-0.2154432) = 0.2$) compared with the population average. 
+The average population time to churn is:
+
+```{r}
+mean(time_to_churn)
+```
+
+And the average time to churn in plan B is 3 which is indeed 20% lower than 3.7! 
+
+## Conclusion
+
+Asking the "when" question instead of "who" not only gives us unbiased results 
+but also deeper insight into what we're really interested with: How long do
+subscribers take to churn.
+
+In the next few blog posts I'll discuss survival analysis a bit more in depth and showcase advanced use cases in churn prediction where survival analysis 
 is crucial for better churn modeling.
-
-
