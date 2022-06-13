@@ -30,7 +30,7 @@ from now on.
 
 So without further ado, let's talk about better churn prediction.
 
-## To churn or not churn - what is the real question?
+## To churn or not churn? - That is not the real question!
 
 One of the main topics I've been working on through the years is churn. Churn reduction 
 is a top priority for many companies and correctly identifying it's root causes can 
