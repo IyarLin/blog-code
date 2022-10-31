@@ -6,7 +6,18 @@
     <description>Recent content in ML on Just be-cause</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 08 Jun 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/ml/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 31 Oct 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/ml/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Better churn prediction - using survival analysis</title>
+      <link>https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/</link>
+      <pubDate>Mon, 31 Oct 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/</guid>
+      <description>Learning to survive
+On a previous post I made the case that survival analysis is essential for better churn prediction. My main argument was that churn is not a question of “who” but rather of “when”.
+In the “when” question we ask when will a subscriber churn? Put differently how long does a subscriber stay subscribed on average? We can then answer one of the most important questions: What is the average subscriber life time value?</description>
+    </item>
+    
     <item>
       <title>Better churn prediction</title>
       <link>https://iyarlin.github.io/2022/06/08/better_churn_modeling/</link>

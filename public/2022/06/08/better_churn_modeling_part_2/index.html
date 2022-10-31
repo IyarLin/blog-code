@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>Better churn prediction - part 2 - Just be-cause</title>
+<meta property="og:title" content="Better churn prediction - part 2 - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/iyar-lin/">LinkedIn</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">3 min read</span>
+    
+
+    <h1 class="article-title">Better churn prediction - part 2</h1>
+
+    
+    <span class="article-date">2022-06-08</span>
+    
+
+    <div class="article-content">
+      
+
+
+<p>On a previous <a href="post">post</a> I made the case that survival analysis is essential
+for better churn prediction. My main argument was that churn is not a question
+of “who” but rather of “when”.</p>
+<p>In this post I’ll elaborate on that idea by introducing survival analysis’ most
+important construct: the survival curve.</p>
+<p>We’ll see how it can be used to answer the “when” question: How long does a subscriber
+take to churn on average?</p>
+<div id="the-survival-curve" class="section level1">
+<h1>The survival curve</h1>
+<p>Let’s roll up our sleeves and dive right in: The survival curve <span class="math inline">\(S(t)\)</span> measures
+the probability a subscriber will “survive” (not churn) until time <span class="math inline">\(t\)</span> since starting
+his subscription. For example <span class="math inline">\(S(3)=0.8\)</span> means a subscriber has %80 chance of
+not churning by the <span class="math inline">\(3^{rd}\)</span> month of subscription.</p>
+<p>The most common way of estimating <span class="math inline">\(S(t)\)</span> is by using the Kaplan-Meier curve who’s
+formula is given by:</p>
+<p><span class="math display">\[\hat{S}(t) = \Pi_{t_i \leq t}\left(1-\frac{d_i}{n_i}\right)\]</span>
+where <span class="math inline">\(t_i\)</span> are all times where at least one subscriber has churned, <span class="math inline">\(d_i\)</span> is the number
+of subscribers who have churned at time <span class="math inline">\(t_i\)</span> and <span class="math inline">\(n_i\)</span> is the number of subscribers
+who survived till at least <span class="math inline">\(t_i\)</span>. The term <span class="math inline">\(\frac{d_i}{n_i}\)</span> is then the probability
+of churning at time <span class="math inline">\(t_i\)</span>.</p>
+<p>To illustrate let’s calculate the survival curve for the following subscriber data:</p>
+<table style="width:38%;">
+<colgroup>
+<col width="18%" />
+<col width="5%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">subscriber</th>
+<th align="center">t</th>
+<th align="center">churned</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">1</td>
+<td align="center">3</td>
+<td align="center">0</td>
+</tr>
+<tr class="even">
+<td align="center">2</td>
+<td align="center">6</td>
+<td align="center">1</td>
+</tr>
+<tr class="odd">
+<td align="center">3</td>
+<td align="center">2</td>
+<td align="center">1</td>
+</tr>
+<tr class="even">
+<td align="center">4</td>
+<td align="center">1</td>
+<td align="center">0</td>
+</tr>
+<tr class="odd">
+<td align="center">5</td>
+<td align="center">2</td>
+<td align="center">0</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">2</td>
+<td align="center">1</td>
+</tr>
+</tbody>
+</table>
+<p>The column <span class="math inline">\(t\)</span> denotes the time a user has been subscribed until today. If he churned
+that would be the time till he churned.</p>
+<p>We have 2 times at which churn events happend: <span class="math inline">\(t_i = \{2,6\}\)</span>.</p>
+<p>For <span class="math inline">\(t &lt; 2\)</span> we have <span class="math inline">\(S(t)=1\)</span> since no one churned up to that point.</p>
+<p>At <span class="math inline">\(t_1=2\)</span> we have <span class="math inline">\(d_1=2\)</span> (subscribers 3 and 6) and
+<span class="math inline">\(n_1=5\)</span> (all subscribers but 4). Using the above formula we get:</p>
+<p><span class="math display">\[S(2) = 1-\frac{2}{5} = 0.6\]</span></p>
+<p>At <span class="math inline">\(t_2=6\)</span> we have <span class="math inline">\(d_2=1\)</span> (subscriber 2) and <span class="math inline">\(n_2=1\)</span> (again, just subscriber 2).</p>
+<p>We thus have:</p>
+<p><span class="math display">\[S(6) = \left(1-\frac{2}{5}\right) \cdot \left(1-\frac{1}{1}\right) = 0\]</span></p>
+<p>Let’s plot that curve:</p>
+<p><img src="/post/better_churn_modeling_part_2_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>We thing to notice is that at that every point along the curve we only consider subscribers who survived up to that point. If a subscriber joined very recently (e.g. subscriber 4) he won’t play a major role in the calculation.</p>
+<div id="expected-life-time" class="section level2">
+<h2>Expected life time</h2>
+<p>Now why go through the hassle of calculating <span class="math inline">\(S(t)\)</span>? Because it turns
+out that the expected life time is the area under the survival curve. If we denote
+the time at which a subscriber has churned by <span class="math inline">\(T\)</span> then:</p>
+<p><span class="math display">\[E(T) = \int_0^{\infty}S(t)dt\]</span>
+And in our example above: <span class="math inline">\(E(T) = 2\cdot 1 + 4 \cdot 0.6 = 4.4\)</span>. If a users’ monthly
+plan bill is for example $10 then we can say that his expected LTV (life time value) is $44. Pretty cool.</p>
+</div>
+<div id="better-answering-the-who-question" class="section level2">
+<h2>Better answering the “who” question</h2>
+<p>In this post I’ve shown how we can use the survival curve to answer the “when”
+question (expected life time). On my next post I’ll show that we can also use it
+to better answer the “who” question!</p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+
