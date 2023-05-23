@@ -57,7 +57,7 @@
 
   <article class="article">
     
-    <span class="article-duration">5 min read</span>
+    <span class="article-duration">4 min read</span>
     
 
     <h1 class="article-title">A better way to analyze feature release impact</h1>
@@ -72,29 +72,30 @@
 
 <div class="figure">
 <img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/header_pic.png" width="450" height="300" alt="" />
-<p class="caption">Photo by author - using DALL-e 2</p>
+<p class="caption">Photo by author - using DALL-E 2</p>
 </div>
 <p><em>Note: a modified version of this article was first published <a href="https://getloops.ai/the-false-sense-of-confidence-with-before-after-analysis/">here</a></em></p>
 <p>A/B tests are the gold standard for estimating causal effects in product
 analytics. But in many cases they aren’t feasible. One of the most common ones
 is the feature release.</p>
 <p>In this post I’ll discuss the common practice of measuring feature release
-impact using simple “before-after” analyses, biases that often plague such
-comparisons and how they can be better handled.</p>
+impact using simple “before-after” comparisons and the biases that often plague
+such analyses. I’ll also give some advise on how those biases can be mitigated.</p>
 <div id="feature-release" class="section level1">
 <h1>Feature release</h1>
-<p>Quite often, a company would release a new product feature or app version without running an A/B test to assess its impact on its main KPIs. That could be due to many reasons, such as low traffic or high technical complexity.</p>
+<p>Quite often, a company would release a new product feature or app version without running an A/B test to assess its impact on its main KPIs. That could be due to
+a myriad of reasons such as low traffic or high technical complexity.</p>
 <p>Having deployed the feature to all users on a specific date product managers
 would usually try to gauge the feature release impact by doing a simple
 “before-after” analysis: comparing the KPI a short period after the launch to the
-some period before.</p>
-<p>While intuitive, such naive comparisons may overlook important sources of bias, leading to a false sense of confidence when the result is positive or a wrongful rollback of a feature in case it turns out negative.</p>
+same period before.</p>
+<p>While intuitive, such naive comparisons may overlook important sources of bias.</p>
 <p>Below I’ll discuss 2 of the most common sources of bias present in simple
 before-after analyses and how they can lead to erroneous conclusions.</p>
 <div id="bias-1-time-effects" class="section level2">
 <h2>Bias 1: Time effects</h2>
 <p>One common scenario is for a product manager to do a “before-after” analysis
-and get a positive result.</p>
+and obtain a positive result.</p>
 <p>Looking at a plot of the KPI over time however they might run into a
 disappointing reckoning:</p>
 <p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
@@ -120,15 +121,15 @@ prior.</p>
 <p>In this specific example, those Android users tend to convert less than iOS
 users, but the release effect itself within those groups is actually positive:</p>
 <p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
-<p>The scenario where the aggregate difference is opposite to the within group
+<p>So taking device into account the release impact was actually positive.
+The scenario where the aggregate difference is opposite to the within group
 difference is a classic example of <a href="https://en.wikipedia.org/wiki/Simpson%27s_paradox">Simpson’s paradox</a>).</p>
 </div>
 <div id="does-that-mean-we-cant-do-without-ab-tests" class="section level2">
 <h2>Does that mean we can’t do without A/B tests?</h2>
 <p>The above cases were relatively simple. Time effects can include complex trends
 and daily seasonality, segment proportion changes can be more subtle and spread
-across many subsets, there could be interactions between segments and time effects
-or the release itself and more.</p>
+across many subsets etc.</p>
 <p>One might get the impression that analyzing data from a feature release is
 useless. I argue however that must not necessarily be the case.</p>
 </div>
@@ -159,11 +160,12 @@ Comparing the pre-control population to the treatment population is analogous to
 the comparison we do in a before-after analysis.</p>
 <p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure_b.png" /></p>
 <p>Using many different tests, we can compare the “Gold standard” estimates with the “before-after” estimates to see how close they tend to be.</p>
-<p>Working at <a href="https://getloops.ai/">Loops</a> I have access to hundreds of A/B tests from dozens of clients using our system. Using the above method, we’ve found that the algorithm has vastly superior accuracy to a simple before-after comparison.</p>
+<p>Working at <a href="https://getloops.ai/">Loops</a> I have access to hundreds of A/B tests
+from dozens of clients using our system. Using the above benchmarking method we’ve found that the algorithm has vastly superior accuracy to a simple “before-after” comparison.</p>
 </div>
 <div id="in-summary" class="section level2">
 <h2>In summary</h2>
-<p>I hope by this point the reader is convinced of the perils associated with using simple “before-after” analyses and that the algorithm outlined above will serve
+<p>I hope by this point the reader is convinced of the perils associated with using simple “before-after” comparison and that the algorithm outlined above will serve
 as a basis for anyone looking to better assess the impact generated by releasing
 a feature in their product.</p>
 </div>

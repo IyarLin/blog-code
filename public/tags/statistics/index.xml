@@ -13,10 +13,10 @@
       <pubDate>Tue, 23 May 2023 00:00:00 +0000</pubDate>
       
       <guid>https://iyarlin.github.io/2023/05/23/the_false_sense_of_confidence_with_simple_before_after_analysis/</guid>
-      <description>Photo by author - using DALL-e 2
+      <description>Photo by author - using DALL-E 2
 Note: a modified version of this article was first published here
 A/B tests are the gold standard for estimating causal effects in product analytics. But in many cases they aren’t feasible. One of the most common ones is the feature release.
-In this post I’ll discuss the common practice of measuring feature release impact using simple “before-after” analyses, biases that often plague such comparisons and how they can be better handled.</description>
+In this post I’ll discuss the common practice of measuring feature release impact using simple “before-after” comparisons and the biases that often plague such analyses.</description>
     </item>
     
   </channel>
