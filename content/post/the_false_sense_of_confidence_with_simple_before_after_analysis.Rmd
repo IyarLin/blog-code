@@ -1,0 +1,234 @@
+---
+title: 'A better way to analyze feature release impact'
+author: Iyar Lin
+date: '2023-05-23'
+slug: the_false_sense_of_confidence_with_simple_before_after_analysis
+categories:
+  - [R]
+tags: [statistics, causal-inference, Algorithms]
+comments: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+```
+
+![Photo by author - using DALL-E 2](/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/header_pic.png){width="450px"
+height="300px"}
+
+*Note: a modified version of this article was first published [here](https://getloops.ai/the-false-sense-of-confidence-with-before-after-analysis/)*
+
+A/B tests are the gold standard for estimating causal effects in product 
+analytics. But in many cases they aren't feasible. One of the most common ones 
+is the feature release. 
+
+In this post I'll discuss the common practice of measuring feature release 
+impact using simple "before-after" comparisons and the biases that often plague 
+such analyses. I'll also give some advise on how those biases can be mitigated.
+
+# Feature release
+
+Quite often, a company would release a new product feature or app version without running an A/B test to assess its impact on its main KPIs. That could be due to 
+a myriad of reasons such as low traffic or high technical complexity.
+
+Having deployed the feature to all users on a specific date product managers
+would usually try to gauge the feature release impact by doing a simple 
+"before-after" analysis: comparing the KPI a short period after the launch to the 
+same period before.
+
+While intuitive, such naive comparisons may overlook important sources of bias.
+
+Below I'll discuss 2 of the most common sources of bias present in simple
+before-after analyses and how they can lead to erroneous conclusions.
+
+## Bias 1: Time effects 
+
+One common scenario is for a product manager to do a "before-after" analysis
+and obtain a positive result.
+
+Looking at a plot of the KPI over time however they might run into a 
+disappointing reckoning:
+
+```{r, echo=FALSE}
+set.seed(42)
+library(dplyr)
+library(ggplot2)
+
+plot_df <- data.frame(day_from_release = -14:14) %>%
+  mutate(
+    release = as.numeric(day_from_release >= 0),
+    KPI = seq(0.2, 0.26, length.out = nrow(.)) +
+      runif(nrow(.), -0.005, 0.005) - 0.015 * release
+  )
+
+lm_mod <- lm(KPI ~ ., data = plot_df)
+plot_df <- rbind(plot_df, plot_df[15, ])
+plot_df$release[30] <- 0
+plot_df$mod <- predict(lm_mod, plot_df)
+
+plot_df %>%
+  ggplot(aes(day_from_release, KPI)) +
+  geom_point() +
+  scale_y_continuous(limits = function(lim) c(lim[1] - 0.005, lim[2] + 0.005)) +
+  theme_bw(base_size = 20) +
+  xlab("Day from release") +
+  geom_vline(xintercept = 0, lty = 2) +
+  geom_line(aes(day_from_release, mod, group = release))
+```
+
+The KPI is on an upward trend throughout the period regardless of the release, 
+whereas the release itself seems to have a negative impact. The simple 
+"before-after" comparison assumes no time dynamics which can be very wrong like 
+in the case illustrated above.
+
+## Bias 2: Change in mix of business 
+
+While biases introduced by time effects can be quite visible - others might be 
+more subtle.
+
+In another scenario a product manager might measure a negative "before-after" release impact. Plotting the KPI over time does not seem to offer an alternative
+conclusion:
+
+```{r, echo=FALSE}
+set.seed(42)
+plot_df <- data.frame(day_from_release = -14:14) %>%
+  mutate(
+    release = as.numeric(day_from_release >= 0),
+    KPI_true = ifelse(release == 1, 0.1, 0.12),
+    KPI = KPI_true + runif(nrow(.), -0.02, 0.02)
+  )
+
+plot_df <- rbind(plot_df, plot_df[15, ])
+plot_df$release[30] <- 0
+plot_df$KPI_true[30] <- 0.12
+
+plot_df %>%
+  ggplot(aes(day_from_release, KPI)) +
+  geom_point() +
+  scale_y_continuous(limits = function(lim) c(lim[1] - 0.01, lim[2] + 0.01)) +
+  theme_bw(base_size = 20) +
+  xlab("Day from release") +
+  geom_vline(xintercept = 0, lty = 2) +
+  geom_line(aes(day_from_release, KPI_true, group = release))
+```
+
+Many companies would stop here and assume the release was bad and needed to be 
+rolled back. 
+
+In many cases however the difference between the periods before and after the release may be due to a change in the mix of users. This can happen by chance 
+but very often is related to marketing campaigns that accompany feature releases.
+
+To make the example concrete it could be that the proportion of Android users has risen significantly during the period after the release compared with the one
+prior.
+
+```{r, echo=FALSE}
+set.seed(42)
+library(ggplot2)
+
+data.frame(
+  proportion = c(0.6, 0.4, 0.8, 0.2),
+  device = factor(c("Android", "iOS", "Android", "iOS")),
+  period = factor(c("pre", "pre", "post", "post"),
+    levels = c("pre", "post"),
+    labels = c("Pre release", "Post release")
+  )
+) %>%
+  ggplot(aes(x = "", y = proportion, fill = device, text = proportion)) +
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar(theta = "y") +
+  facet_grid(~period) +
+  theme_void(base_size = 15) +
+  geom_text(aes(label = paste0(round(proportion * 100), "%")),
+    position = position_stack(vjust = 0.5)
+  ) +
+  theme(legend.position = "bottom")
+```
+
+In this specific example, those Android users tend to convert less than iOS 
+users, but the release effect itself within those groups is actually positive:
+
+```{r, echo=FALSE}
+set.seed(42)
+plot_df <- data.frame(
+  day_from_release = rep(-14:14, 2),
+  os = factor(rep(c("iOS", "Android"), each = 29))
+) %>%
+  mutate(
+    release = as.numeric(day_from_release >= 0),
+    KPI_true = rep(c(0.18, 0.07), each = 29) + 0.03 * release,
+    KPI = KPI_true + runif(nrow(.), -0.02, 0.02)
+  )
+
+lm_mod <- lm(KPI ~ ., data = plot_df)
+
+plot_df <- rbind(plot_df, plot_df[c(15, 44), ])
+plot_df$release[59:60] <- 0
+plot_df$mod <- predict(lm_mod, plot_df)
+
+plot_df %>%
+  ggplot(aes(day_from_release, KPI)) +
+  geom_point() +
+  facet_grid(~os) +
+  scale_y_continuous(limits = function(lim) c(lim[1] - 0.005, lim[2] + 0.005)) +
+  theme_bw(base_size = 20) +
+  xlab("Day from release") +
+  geom_vline(xintercept = 0, lty = 2) +
+  geom_line(aes(day_from_release, mod, group = release))
+```
+
+So taking device into account the release impact was actually positive. 
+The scenario where the aggregate difference is opposite to the within group
+difference is a classic example of [Simpson's paradox](https://en.wikipedia.org/wiki/Simpson%27s_paradox)).
+
+## Does that mean we can't do without A/B tests?
+
+The above cases were relatively simple. Time effects can include complex trends 
+and daily seasonality, segment proportion changes can be more subtle and spread 
+across many subsets etc.
+
+One might get the impression that analyzing data from a feature release is 
+useless. I argue however that must not necessarily be the case.
+
+## Enter the Release Impact Algorithm
+
+Working at [Loops](https://getloops.ai/) I've devised an algorithm to automatically 
+and transparently deal with the above biases. I can't share the full implementation details for business and IP reasons, but below I present a general overview:
+
+1. Use an ML algorithm to find segments whose proportion in the population changed 
+the most between the pre and post-release periods.  
+1. Model time trends and seasonality along with the release impact **separately** 
+within each segment.
+1. Take a weighted average of the release impact estimated within all segments to 
+arrive at the final impact estimate.  
+
+## Testing the algorithm validity
+
+You can never know for sure if any method works on a particular dataset. You can 
+however get a rough estimate by using past A/B tests.
+
+For example, an A/B test with control and treatment populations was executed for 
+some period. Comparing the average KPI between those two groups yields an 
+**unbiased** estimate of the treatment impact. This serves as our "Gold standard."
+
+![](/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure_a.png)
+
+We'll name the segment of users in the period before the test "pre-control." 
+Comparing the pre-control population to the treatment population is analogous to 
+the comparison we do in a before-after analysis. 
+
+![](/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure_b.png)
+
+Using many different tests, we can compare the "Gold standard" estimates with the "before-after" estimates to see how close they tend to be. 
+
+Working at [Loops](https://getloops.ai/) I have access to hundreds of A/B tests 
+from dozens of clients using our system. Using the above benchmarking method we've found that the algorithm has vastly superior accuracy to a simple "before-after" comparison.
+
+## In summary
+
+I hope by this point the reader is convinced of the perils associated with using simple "before-after" comparison and that the algorithm outlined above will serve 
+as a basis for anyone looking to better assess the impact generated by releasing
+a feature in their product.
+

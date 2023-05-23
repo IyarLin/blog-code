@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>A better way to analyze feature release impact - Just be-cause</title>
+<meta property="og:title" content="A better way to analyze feature release impact - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/iyar-lin/">LinkedIn</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">A better way to analyze feature release impact</h1>
+
+    
+    <span class="article-date">2023-05-23</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div class="figure">
+<img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/header_pic.png" width="450" height="300" alt="" />
+<p class="caption">Photo by author - using DALL-e 2</p>
+</div>
+<p><em>Note: a modified version of this article was first published <a href="https://getloops.ai/the-false-sense-of-confidence-with-before-after-analysis/">here</a></em></p>
+<p>A/B tests are the gold standard for estimating causal effects in product
+analytics. But in many cases they aren’t feasible. One of the most common ones
+is the feature release.</p>
+<p>In this post I’ll discuss the common practice of measuring feature release
+impact using simple “before-after” analyses, biases that often plague such
+comparisons and how they can be better handled.</p>
+<div id="feature-release" class="section level1">
+<h1>Feature release</h1>
+<p>Quite often, a company would release a new product feature or app version without running an A/B test to assess its impact on its main KPIs. That could be due to many reasons, such as low traffic or high technical complexity.</p>
+<p>Having deployed the feature to all users on a specific date product managers
+would usually try to gauge the feature release impact by doing a simple
+“before-after” analysis: comparing the KPI a short period after the launch to the
+some period before.</p>
+<p>While intuitive, such naive comparisons may overlook important sources of bias, leading to a false sense of confidence when the result is positive or a wrongful rollback of a feature in case it turns out negative.</p>
+<p>Below I’ll discuss 2 of the most common sources of bias present in simple
+before-after analyses and how they can lead to erroneous conclusions.</p>
+<div id="bias-1-time-effects" class="section level2">
+<h2>Bias 1: Time effects</h2>
+<p>One common scenario is for a product manager to do a “before-after” analysis
+and get a positive result.</p>
+<p>Looking at a plot of the KPI over time however they might run into a
+disappointing reckoning:</p>
+<p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>The KPI is on an upward trend throughout the period regardless of the release,
+whereas the release itself seems to have a negative impact. The simple
+“before-after” comparison assumes no time dynamics which can be very wrong like
+in the case illustrated above.</p>
+</div>
+<div id="bias-2-change-in-mix-of-business" class="section level2">
+<h2>Bias 2: Change in mix of business</h2>
+<p>While biases introduced by time effects can be quite visible - others might be
+more subtle.</p>
+<p>In another scenario a product manager might measure a negative “before-after” release impact. Plotting the KPI over time does not seem to offer an alternative
+conclusion:</p>
+<p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>Many companies would stop here and assume the release was bad and needed to be
+rolled back.</p>
+<p>In many cases however the difference between the periods before and after the release may be due to a change in the mix of users. This can happen by chance
+but very often is related to marketing campaigns that accompany feature releases.</p>
+<p>To make the example concrete it could be that the proportion of Android users has risen significantly during the period after the release compared with the one
+prior.</p>
+<p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>In this specific example, those Android users tend to convert less than iOS
+users, but the release effect itself within those groups is actually positive:</p>
+<p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+<p>The scenario where the aggregate difference is opposite to the within group
+difference is a classic example of <a href="https://en.wikipedia.org/wiki/Simpson%27s_paradox">Simpson’s paradox</a>).</p>
+</div>
+<div id="does-that-mean-we-cant-do-without-ab-tests" class="section level2">
+<h2>Does that mean we can’t do without A/B tests?</h2>
+<p>The above cases were relatively simple. Time effects can include complex trends
+and daily seasonality, segment proportion changes can be more subtle and spread
+across many subsets, there could be interactions between segments and time effects
+or the release itself and more.</p>
+<p>One might get the impression that analyzing data from a feature release is
+useless. I argue however that must not necessarily be the case.</p>
+</div>
+<div id="enter-the-release-impact-algorithm" class="section level2">
+<h2>Enter the Release Impact Algorithm</h2>
+<p>Working at <a href="https://getloops.ai/">Loops</a> I’ve devised an algorithm to automatically
+and transparently deal with the above biases. I can’t share the full implementation details for business and IP reasons, but below I present a general overview:</p>
+<ol style="list-style-type: decimal">
+<li>Use an ML algorithm to find segments whose proportion in the population changed
+the most between the pre and post-release periods.<br />
+</li>
+<li>Model time trends and seasonality along with the release impact <strong>separately</strong>
+within each segment.</li>
+<li>Take a weighted average of the release impact estimated within all segments to
+arrive at the final impact estimate.</li>
+</ol>
+</div>
+<div id="testing-the-algorithm-validity" class="section level2">
+<h2>Testing the algorithm validity</h2>
+<p>You can never know for sure if any method works on a particular dataset. You can
+however get a rough estimate by using past A/B tests.</p>
+<p>For example, an A/B test with control and treatment populations was executed for
+some period. Comparing the average KPI between those two groups yields an
+<strong>unbiased</strong> estimate of the treatment impact. This serves as our “Gold standard.”</p>
+<p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure_a.png" /></p>
+<p>We’ll name the segment of users in the period before the test “pre-control.”
+Comparing the pre-control population to the treatment population is analogous to
+the comparison we do in a before-after analysis.</p>
+<p><img src="/post/the_false_sense_of_confidence_with_simple_before_after_analysis_files/figure_b.png" /></p>
+<p>Using many different tests, we can compare the “Gold standard” estimates with the “before-after” estimates to see how close they tend to be.</p>
+<p>Working at <a href="https://getloops.ai/">Loops</a> I have access to hundreds of A/B tests from dozens of clients using our system. Using the above method, we’ve found that the algorithm has vastly superior accuracy to a simple before-after comparison.</p>
+</div>
+<div id="in-summary" class="section level2">
+<h2>In summary</h2>
+<p>I hope by this point the reader is convinced of the perils associated with using simple “before-after” analyses and that the algorithm outlined above will serve
+as a basis for anyone looking to better assess the impact generated by releasing
+a feature in their product.</p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+
+    
+  </body>
+</html>
+

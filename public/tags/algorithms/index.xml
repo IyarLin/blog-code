@@ -6,7 +6,19 @@
     <description>Recent content in Algorithms on Just be-cause</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 20 May 2019 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/algorithms/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Tue, 23 May 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/algorithms/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A better way to analyze feature release impact</title>
+      <link>https://iyarlin.github.io/2023/05/23/the_false_sense_of_confidence_with_simple_before_after_analysis/</link>
+      <pubDate>Tue, 23 May 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2023/05/23/the_false_sense_of_confidence_with_simple_before_after_analysis/</guid>
+      <description>Photo by author - using DALL-e 2
+Note: a modified version of this article was first published here
+A/B tests are the gold standard for estimating causal effects in product analytics. But in many cases they aren’t feasible. One of the most common ones is the feature release.
+In this post I’ll discuss the common practice of measuring feature release impact using simple “before-after” analyses, biases that often plague such comparisons and how they can be better handled.</description>
+    </item>
+    
     <item>
       <title>Causal inference bake off (Kaggle style!)</title>
       <link>https://iyarlin.github.io/2019/05/20/causal-inference-bake-off-kaggle-style/</link>
