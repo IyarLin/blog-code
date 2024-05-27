@@ -6,7 +6,17 @@
     <description>Recent content in survival_analysis on Just be-cause</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 31 Oct 2022 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/survival_analysis/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Mon, 27 May 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/survival_analysis/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Better churn prediction - part 3</title>
+      <link>https://iyarlin.github.io/2024/05/27/better_churn_modeling_part_3/</link>
+      <pubDate>Mon, 27 May 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2024/05/27/better_churn_modeling_part_3/</guid>
+      <description>Photo by author - using DALL-E 3 On previous posts (part 1, part 2) I made the case that survival analysis is essential for better churn prediction. My main argument was that churn is not a question of “who” but rather of “when”.
+In this post I’ll demonstrate that even when we’re interested with the “who” question (0/1 churn indicator) it’s often preferable to use survival analysis rather than simple classification.</description>
+    </item>
+    
     <item>
       <title>Better churn prediction - using survival analysis</title>
       <link>https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/</link>

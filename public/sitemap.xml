@@ -2,6 +2,36 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://iyarlin.github.io/2024/05/27/better_churn_modeling_part_3/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/churn/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/classification/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/ml/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/post/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/r/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/simulation/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/survival_analysis/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>https://iyarlin.github.io/tags/</loc>
+    <lastmod>2024-05-27T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>https://iyarlin.github.io/2023/05/23/the_false_sense_of_confidence_with_simple_before_after_analysis/</loc>
     <lastmod>2023-05-23T00:00:00+00:00</lastmod>
   </url><url>
@@ -11,37 +41,10 @@
     <loc>https://iyarlin.github.io/tags/causal-inference/</loc>
     <lastmod>2023-05-23T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>https://iyarlin.github.io/</loc>
-    <lastmod>2023-05-23T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/post/</loc>
-    <lastmod>2023-05-23T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>https://iyarlin.github.io/tags/statistics/</loc>
     <lastmod>2023-05-23T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>https://iyarlin.github.io/tags/</loc>
-    <lastmod>2023-05-23T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/</loc>
-    <lastmod>2022-10-31T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/churn/</loc>
-    <lastmod>2022-10-31T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/classification/</loc>
-    <lastmod>2022-10-31T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/ml/</loc>
-    <lastmod>2022-10-31T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/r/</loc>
-    <lastmod>2022-10-31T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/simulation/</loc>
-    <lastmod>2022-10-31T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/survival_analysis/</loc>
     <lastmod>2022-10-31T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://iyarlin.github.io/tags/ai/</loc>

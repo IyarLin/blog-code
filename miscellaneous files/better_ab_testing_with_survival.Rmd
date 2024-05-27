@@ -1,0 +1,118 @@
+---
+title: "Better AB testing with survival analysis"
+author: "Iyar Lin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(survival)
+```
+
+```{r}
+p1 <- 0.3
+y <- seq(0.8,1,length.out = 50)
+shape <- 3000
+x <- qweibull(y, p1, shape, lower.tail = F)
+
+p2 <- 0.32
+x2 <- qweibull(y, p2, shape, lower.tail = F)
+plot(x, y, type = "l", xlim = c(0,7))
+lines(x2, y, col = "red")
+```
+
+
+```{r}
+gen_surv_data <- function(p_, m){
+  set.seed(m)
+  tstart <- runif(n, 0, T_test)
+  tconvert <- rweibull(n, p_, shape)
+  status <- as.integer(tstart + tconvert < T_test)
+  tstatus <- ifelse(status == 0, T_test - tstart, tconvert)
+  return(data.frame(tstatus=tstatus, status=status))
+}
+
+gen_surv_data <- function(p_, m){
+  set.seed(m)
+  status <- rbinom(n,1, p_)
+  tstatus <- rep(0.1, length(status))
+  return(data.frame(tstatus=tstatus, status=status))
+}
+
+run_simulation_m <- function(m){
+  surv_data_1 <- gen_surv_data(p1, m)
+  surv_data_2 <- gen_surv_data(p2, m+1)
+  p1_hat <- mean(surv_data_1$status)
+  p1_var <- p1_hat*(1-p1_hat)/length(surv_data_1$status)
+  p2_hat <- mean(surv_data_2$status)
+  p2_var <- p2_hat*(1-p2_hat)/length(surv_data_2$status)
+  stat <- abs(p2_hat - p1_hat)/sqrt(p1_var + p2_var)
+  ans1 <- pnorm(stat, lower.tail = F)*2
+  
+  surv_data_1$variant <- "control"
+  surv_data_2$variant <- "treatment"
+  surv_data <- rbind(surv_data_1, surv_data_2)
+  log_rank_test <- survdiff(Surv(tstatus, status)~variant, data = surv_data)
+  ans2 <- log_rank_test$pvalue
+  
+  surv_model <- summary(survfit(Surv(tstatus, status)~variant, data = surv_data), 
+                        times = T_test, extend = T)
+  p1_hat <- 1 - surv_model$surv[1]
+  p1_var <- surv_model$std.err[1]^2
+  p2_hat <- 1 - surv_model$surv[2]
+  p2_var <- surv_model$std.err[2]^2
+  stat <- abs(p2_hat - p1_hat)/sqrt(p1_var + p2_var)
+  ans3 <- pnorm(stat, lower.tail = F)*2
+  return(c(ans1, ans2, ans3))
+}
+```
+
+```{r}
+alpha <- 0.05
+n <- 2000
+T_test <- 7
+M <- 10000
+p1 <- p2 <- 0.3
+
+ans <- vector(length = M)
+ans_surv <- vector(length = M)
+ans_surv2 <- vector(length = M)
+
+for(m in 1:M){
+  res <- run_simulation_m(m)
+  ans[m] <- res[1]
+  ans_surv[m] <- res[2]
+  ans_surv2[m] <- res[3]
+}
+
+mean(ans <= alpha, na.rm = T)
+mean(ans_surv <= alpha, na.rm = T)
+mean(ans_surv2 <= alpha, na.rm = T)
+```
+
+
+```{r}
+p1 <- 0.3
+p2 <- 0.32
+
+ans <- vector(length = M)
+ans_surv <- vector(length = M)
+ans_surv2 <- vector(length = M)
+
+for(m in 1:M){
+  res <- run_simulation_m(m)
+  ans[m] <- res[1]
+  ans_surv[m] <- res[2]
+  ans_surv2[m] <- res[3]
+}
+
+a <- mean(ans <= alpha)
+b <- mean(ans_surv <= alpha)
+d <- mean(ans_surv2 <= alpha)
+c(a, b, d, b/a)
+```
+

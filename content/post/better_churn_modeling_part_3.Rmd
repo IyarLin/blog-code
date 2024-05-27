@@ -1,0 +1,144 @@
+---
+title: 'Better churn prediction - part 3'
+author: Iyar Lin
+date: '2024-05-27'
+slug: better_churn_modeling_part_3
+categories:
+  - [R]
+tags: [ML, R, survival_analysis, classification, churn, simulation]
+comments: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F, message = F, cache = F)
+library(survival)
+```
+
+![Photo by author - using DALL-E
+3](/post/better_churn_modeling_part_3_files/churn_rate.jpeg){width="450px"
+height="300px"}
+
+On previous posts ([part
+1](https://iyarlin.github.io/2022/06/08/better_churn_modeling/), [part
+2](https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/))
+I made the case that survival analysis is essential for better churn
+prediction. My main argument was that churn is not a question of "who"
+but rather of "when".
+
+In this post I'll demonstrate that even when we're interested with the
+"who" question (0/1 churn indicator) it's often preferable to use survival analysis rather than simple classification.
+
+Specifically I'll show that using survival analysis we can detect
+changes to churn rates much earlier than when using the classification
+approach.
+
+# Simulation study
+
+```{r, preliminaries}
+alpha_pre <- 0.18
+alpha_post <- 0.16
+churn_pre <- round(pweibull(30, alpha_pre, 30000), 3)
+churn_pre_pct <- paste0(100 * churn_pre, "%")
+churn_post <- round(pweibull(30, alpha_post, 30000), 3)
+churn_post_pct <- paste0(100 * churn_post, "%")
+```
+
+Going back to the classic cellphone subscribers example: imagine we'd like to
+monitor 30-day churn in new subscribers. For users who joined after May 1st 2023 we'll simulate their subscription time before churning $T$ using a Weibull distribution with shape parameter $\alpha_{\text{pre}} =$ `r alpha_pre` and scale
+parameter $\sigma = 30,000$. The 30 day churn rate in this case is `r churn_pre_pct` ($P(T_{\alpha_{\text{pre}}} \leq 30)=$ `r churn_pre`).
+
+After July 1st we'll simulate users' subscription time using a Weibull distribution
+with shape parameter $\alpha_{\text{pre}}=$ `r alpha_post` and scale
+parameter $\sigma = 30,000$. The 30 day churn rate in this case is `r churn_post_pct`.
+
+Below we can see the survival curves for both periods:
+
+```{r, plot survival curves}
+x <- seq(0, 30, 0.1)
+y <- 1 - pweibull(x, alpha_pre, 30000)
+y2 <- 1 - pweibull(x, alpha_post, 30000)
+plot(x, y2, type = "line", col = "red", ylab = "S(t)", xlab = "t (days)")
+lines(x, y, col = "black")
+legend("topright",
+  col = c("black", "red"), legend = c("pre", "post"), lty = 1,
+  title = "Period"
+)
+```
+
+```{r, subscription times simulation}
+set.seed(1)
+window <- 7
+avg_users_per_day <- 500
+overall_users <- avg_users_per_day * length(seq.Date(as.Date("2023-05-01"), as.Date("2023-09-01"), by = "day"))
+
+subs_df <- data.frame(join_date = as.Date(
+  runif(overall_users, as.Date("2023-05-01"), as.Date("2023-09-01")),
+  origin = "1970-01-01"
+))
+subs_df$subscription_time <- sapply(
+  subs_df$join_date < as.Date("2023-07-01"),
+  function(x) if (x) rweibull(1, alpha_pre, 30000) else rweibull(1, alpha_post, 30000)
+)
+```
+
+# Churn monitoring using classification
+
+To measure 30 day churn using classification we'll take a cohort of users who
+joined 30 to 37 days ago and label those with subscription time less than 30 days 
+as churned and the rest as none churned.
+
+Below we plot the churn rate over time, with the dashed purple line indicating the date after which the heightened churn rate users started joining:
+
+```{r}
+simple_churn <- function(date_i) {
+  df_t <- subs_df[subs_df$join_date >= date_i - 30 - window &
+    subs_df$join_date < date_i - 30, ]
+  mean(df_t$subscription_time <= 30)
+}
+
+dates <- seq.Date(as.Date("2023-06-07"), as.Date("2023-09-01"), by = "day")
+simple_churns <- sapply(dates, simple_churn)
+plot(dates, simple_churns, type = "l", xlab = NA, ylab = "30 day churn")
+abline(v = as.Date("2023-07-01"), col = "purple", lty = 2)
+```
+
+We can see that the 30 day churn rate started rising only a month after
+the heightened churn users started joining! 
+
+# Churn monitoring done the right way - with survival analysis
+
+When using survival analysis however we can use all users when
+constructing the survival curve. Let's see how the survival estimate
+compares with the classification one:
+
+```{r}
+surv_churn <- function(date_i) {
+  df_t <- subs_df[subs_df$join_date >= date_i - 30 - window & subs_df$join_date <= date_i, ]
+  df_t$status <- as.integer(df_t$join_date + df_t$subscription_time < date_i)
+  df_t$tstatus <- ifelse(df_t$status == 1, df_t$subscription_time, as.numeric(date_i - df_t$join_date))
+  surv_i <- survfit(Surv(tstatus, status) ~ 1, data = df_t)
+  1 - summary(surv_i, times = 30, extend = T)$surv
+}
+surv_churns <- sapply(dates, surv_churn)
+
+plot(dates, simple_churns, type = "l", xlab = NA, ylab = "30 day churn")
+lines(dates, surv_churns, col = "blue")
+abline(v = as.Date("2023-07-01"), col = "purple", lty = 2)
+legend("topleft",
+  col = c("black", "blue"), legend = c("classification", "survival"),
+  title = "method", lty = 1, cex = 0.9
+)
+```
+We can see that indeed the survival estimate upticks much earlier than the classification
+one! We can also the estimate is more stable. 
+
+## In summary
+
+In this post we've seen yet another scenario where using survival analysis is 
+preferable to using classification: Monitoring churn rates using survival can
+help us detect changes in churn much faster compared with classification.
+
+If you're interested with the simulation code used in this post go check it out on [github](https://github.com/IyarLin/blog-code)

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>Better churn prediction - part 3 - Just be-cause</title>
+<meta property="og:title" content="Better churn prediction - part 3 - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/iyar-lin/">LinkedIn</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">2 min read</span>
+    
+
+    <h1 class="article-title">Better churn prediction - part 3</h1>
+
+    
+    <span class="article-date">2024-05-27</span>
+    
+
+    <div class="article-content">
+      
+
+
+<div class="float">
+<img src="/post/better_churn_modeling_part_3_files/churn_rate.jpeg" width="450" height="300" alt="Photo by author - using DALL-E 3" />
+<div class="figcaption">Photo by author - using DALL-E
+3</div>
+</div>
+<p>On previous posts (<a href="https://iyarlin.github.io/2022/06/08/better_churn_modeling/">part
+1</a>, <a href="https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/">part
+2</a>)
+I made the case that survival analysis is essential for better churn
+prediction. My main argument was that churn is not a question of “who”
+but rather of “when”.</p>
+<p>In this post I’ll demonstrate that even when we’re interested with the
+“who” question (0/1 churn indicator) it’s often preferable to use survival analysis rather than simple classification.</p>
+<p>Specifically I’ll show that using survival analysis we can detect
+changes to churn rates much earlier than when using the classification
+approach.</p>
+<div id="simulation-study" class="section level1">
+<h1>Simulation study</h1>
+<p>Going back to the classic cellphone subscribers example: imagine we’d like to
+monitor 30-day churn in new subscribers. For users who joined after May 1st 2023 we’ll simulate their subscription time before churning <span class="math inline">\(T\)</span> using a Weibull distribution with shape parameter <span class="math inline">\(\alpha_{\text{pre}} =\)</span> 0.18 and scale
+parameter <span class="math inline">\(\sigma = 30,000\)</span>. The 30 day churn rate in this case is 25.1% (<span class="math inline">\(P(T_{\alpha_{\text{pre}}} \leq 30)=\)</span> 0.251).</p>
+<p>After July 1st we’ll simulate users’ subscription time using a Weibull distribution
+with shape parameter <span class="math inline">\(\alpha_{\text{pre}}=\)</span> 0.16 and scale
+parameter <span class="math inline">\(\sigma = 30,000\)</span>. The 30 day churn rate in this case is 28.2%.</p>
+<p>Below we can see the survival curves for both periods:</p>
+<p><img src="/post/better_churn_modeling_part_3_files/figure-html/plot%20survival%20curves-1.png" width="672" /></p>
+</div>
+<div id="churn-monitoring-using-classification" class="section level1">
+<h1>Churn monitoring using classification</h1>
+<p>To measure 30 day churn using classification we’ll take a cohort of users who
+joined 30 to 37 days ago and label those with subscription time less than 30 days
+as churned and the rest as none churned.</p>
+<p>Below we plot the churn rate over time, with the dashed purple line indicating the date after which the heightened churn rate users started joining:</p>
+<p><img src="/post/better_churn_modeling_part_3_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>We can see that the 30 day churn rate started rising only a month after
+the heightened churn users started joining!</p>
+</div>
+<div id="churn-monitoring-done-the-right-way---with-survival-analysis" class="section level1">
+<h1>Churn monitoring done the right way - with survival analysis</h1>
+<p>When using survival analysis however we can use all users when
+constructing the survival curve. Let’s see how the survival estimate
+compares with the classification one:</p>
+<p><img src="/post/better_churn_modeling_part_3_files/figure-html/unnamed-chunk-2-1.png" width="672" />
+We can see that indeed the survival estimate upticks much earlier than the classification
+one! We can also the estimate is more stable.</p>
+<div id="in-summary" class="section level2">
+<h2>In summary</h2>
+<p>In this post we’ve seen yet another scenario where using survival analysis is
+preferable to using classification: Monitoring churn rates using survival can
+help us detect changes in churn much faster compared with classification.</p>
+<p>If you’re interested with the simulation code used in this post go check it out on <a href="https://github.com/IyarLin/blog-code">github</a></p>
+</div>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+
