@@ -6,7 +6,18 @@
     <description>Recent content on Just be-cause</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 27 May 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 10 Jul 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Better A/B testing with survival analysis</title>
+      <link>https://iyarlin.github.io/2024/07/10/better_ab_testing_with_survival/</link>
+      <pubDate>Wed, 10 Jul 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/2024/07/10/better_ab_testing_with_survival/</guid>
+      <description>Pic by author - using DALL-E 3 When running experiments don’t forget to bring your survival kit I’ve already made the case in several blog posts (part 1, part 2, part 3) that using survival analysis can improve churn prediction.
+In this blog post I’ll show another use case where survival analysis can improve on common practices: A/B testing!
+The problems with common A/B testing practices Usually when running an A/B test analysts assign users randomly to variants over time and measure conversion rate as the ratio between the number of conversions and the number of users in each variant.</description>
+    </item>
+    
     <item>
       <title>Better churn prediction - part 3</title>
       <link>https://iyarlin.github.io/2024/05/27/better_churn_modeling_part_3/</link>

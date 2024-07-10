@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Hugo 0.100.0" />
+
+
+<title>Better A/B testing with survival analysis - Just be-cause</title>
+<meta property="og:title" content="Better A/B testing with survival analysis - Just be-cause">
+
+
+  <link href='https://iyarlin.github.io/images/favicon.ico' rel='icon' type='image/x-icon'/>
+
+
+
+  
+
+
+
+
+
+
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+<link rel="stylesheet" href="/css/fonts.css" media="all">
+<link rel="stylesheet" href="/css/main.css" media="all">
+
+
+
+  </head>
+  <body>
+    <div class="wrapper">
+      <header class="header">
+        <nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/home_button.png"
+         width="100"
+         height="100"
+         alt="Logo">
+  </a>
+
+  <ul class="nav-links">
+    
+    <li><a href="/about/">About</a></li>
+    
+    <li><a href="https://github.com/IyarLin">GitHub</a></li>
+    
+    <li><a href="https://www.linkedin.com/in/iyar-lin/">LinkedIn</a></li>
+    
+  </ul>
+</nav>
+
+      </header>
+
+
+<main class="content" role="main">
+
+  <article class="article">
+    
+    <span class="article-duration">5 min read</span>
+    
+
+    <h1 class="article-title">Better A/B testing with survival analysis</h1>
+
+    
+    <span class="article-date">2024-07-10</span>
+    
+
+    <div class="article-content">
+      
+
+
+<center>
+<div class="float">
+<img src="/post/better_ab_testing_with_survival_files/scientist_survival_kit.jpeg" width="450" height="350" alt="Pic by author - using DALL-E 3" />
+<div class="figcaption">Pic by author - using DALL-E 3</div>
+</div>
+</center>
+<hr />
+<center>
+<em>When running experiments</em>
+</center>
+<center>
+<em>don’t forget to bring your survival kit</em>
+</center>
+<hr />
+<p>I’ve already made the case in several blog posts (<a href="https://iyarlin.github.io/2022/06/08/better_churn_modeling/">part 1</a>, <a href="https://iyarlin.github.io/2022/10/31/better_churn_modeling_part_2/">part 2</a>, <a href="https://www.linkedin.com/pulse/better-churn-prediction-part-3-iyar-lin-ov5af">part 3</a>) that using survival analysis can improve churn prediction.</p>
+<p>In this blog post I’ll show another use case where survival analysis
+can improve on common practices: A/B testing!</p>
+<div id="the-problems-with-common-ab-testing-practices" class="section level1">
+<h1>The problems with common A/B testing practices</h1>
+<p>Usually when running an A/B test analysts assign users randomly to variants over
+time and measure conversion rate as the ratio between the number of conversions
+and the number of users in each variant. Users who just entered the test and those
+who are in the test for 2 weeks get the same weight.</p>
+<p>This can be enough for cases where a conversion either happens or not
+within a short time frame after assignment to a variant (e.g. Finishing an on-boarding flow).</p>
+<p>There are however many instances where conversions are spread over a longer time
+frame. One example would be first order after visiting a site landing page. Such conversions may happen within minutes, but a large churn could also happen within days
+after the first visit.</p>
+<p>In such cases the business KPIs are usually “bounded” to a certain period - e.g.
+“conversion within 7 days” or “churn within 1 month”.</p>
+<p>In those instance measuring conversions without considering their timing
+has 2 major flaws:</p>
+<ol style="list-style-type: decimal">
+<li>It makes the statistic we’re measuring unintelligible - Average conversions
+at any point in time does not translate to any bounded metric. In fact as the
+test keeps running - conversion rates will increase just because users get more
+time to convert. The experiment results will be thus hard to relate to the business
+KPIs.</li>
+<li>It discards the timing information which could lead to reduced power compared
+with methods that do take conversion timing into account.</li>
+</ol>
+<p>To demonstrate point #2 we’ll run a small simulation study</p>
+</div>
+<div id="simulation-study" class="section level1">
+<h1>Simulation study</h1>
+<p>We’ll have users join the experiment randomly over a 30 day period. Users’ time
+to convert will be simulated from a Weibull distribution with scale
+<span class="math inline">\(\sigma = 30,000\)</span> and <span class="math inline">\(\alpha_{\text{ctrl}}=0.18\)</span> for the control group and <span class="math inline">\(\alpha_{\text{ctrl}}=0.157\)</span> for the treatment group.</p>
+<p>Below are the corresponding survival curves:</p>
+<pre class="r"><code>alpha_ctrl &lt;- 0.18
+alpha_trt &lt;- 0.157
+sigma &lt;- 30000
+conv_7d_ctrl &lt;- format_pct(pweibull(7, alpha_ctrl, sigma))
+conv_7d_trt &lt;- format_pct(pweibull(7, alpha_trt, sigma))
+
+t &lt;- seq(0, 7, 0.1)
+surv_ctrl &lt;- 1 - pweibull(t, alpha_ctrl, sigma)
+surv_trt &lt;- 1 - pweibull(t, alpha_trt, sigma)
+plot(t, surv_trt, type = &quot;line&quot;, col = &quot;red&quot;, ylab = &quot;S(t)&quot;, xlab = &quot;t (days)&quot;, 
+     ylim = c(0.7, 1))
+lines(t, surv_ctrl, col = &quot;black&quot;)
+legend(&quot;topright&quot;,
+  col = c(&quot;black&quot;, &quot;red&quot;), legend = c(&quot;Control&quot;, &quot;Treatment&quot;), lty = 1,
+  title = &quot;Variant&quot;
+)</code></pre>
+<p><img src="/post/better_ab_testing_with_survival_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>Assuming we’re interested with conversions within 7 days, the true (unknown) conversion rate in the control group is 19.9% and in the treatment is
+23.6%.</p>
+<p>Below is the function which will generate the simulation data:</p>
+<pre class="r"><code>n &lt;- 2000
+test_duration &lt;- 30
+
+gen_surv_data &lt;- function(m, alpha){
+  set.seed(m)
+  tstart &lt;- runif(n, 0, test_duration)
+  tconvert &lt;- rweibull(n, alpha, sigma)
+  status &lt;- as.integer(tstart + tconvert &lt; test_duration)
+  tstatus &lt;- ifelse(status == 0, test_duration - tstart, tconvert)
+  return(data.frame(tstatus=tstatus, status=status))
+}</code></pre>
+<p>To demonstrate the benefits of using survival in A/B testing we’ll compare the
+power of test 3 statistics:</p>
+<ol style="list-style-type: decimal">
+<li>T-test on conversions (the common procedure)</li>
+<li>T-test on 7 day conversion (estimated using a Kaplan-Meier curve)</li>
+<li>Peto &amp; Peto modification of the Gehan-Wilcoxon test</li>
+</ol>
+<p>Below is the code that implements the above:</p>
+<pre class="r"><code>run_simulation &lt;- function(m, alpha1, alpha2){
+  data_1 &lt;- gen_surv_data(m, alpha1)
+  data_2 &lt;- gen_surv_data(m+1, alpha2)
+  
+  # T-test on conversions (the common procedure):
+  p1_hat &lt;- mean(data_1$status)
+  p1_var &lt;- p1_hat*(1-p1_hat)/length(data_1$status)
+  p2_hat &lt;- mean(data_2$status)
+  p2_var &lt;- p2_hat*(1-p2_hat)/length(data_2$status)
+  stat &lt;- abs(p2_hat - p1_hat)/sqrt(p1_var + p2_var)
+  ans1 &lt;- pnorm(stat, lower.tail = F)*2
+  
+  # T-test on 7 day conversion (estimated using a Kaplan-Meier curve):
+  data_1$variant &lt;- &quot;control&quot;
+  data_2$variant &lt;- &quot;treatment&quot;
+  surv_data &lt;- rbind(data_1, data_2)
+  
+  surv_model &lt;- summary(survfit(Surv(tstatus, status)~variant, data = surv_data), 
+                        times = 7, extend = T)
+  p1_hat &lt;- 1 - surv_model$surv[1]
+  p1_var &lt;- surv_model$std.err[1]^2
+  p2_hat &lt;- 1 - surv_model$surv[2]
+  p2_var &lt;- surv_model$std.err[2]^2
+  stat &lt;- abs(p2_hat - p1_hat)/sqrt(p1_var + p2_var)
+  ans2 &lt;- pnorm(stat, lower.tail = F)*2
+  
+  # Peto &amp; Peto modification of the Gehan-Wilcoxon test:
+  mgw_test &lt;- survdiff(Surv(tstatus, status)~variant, data = surv_data, rho = 1)
+  ans3 &lt;- mgw_test$pvalue
+  
+  return(data.frame(`T-test conversions` = ans1, `T-test KM 7 day conversion` = ans2, 
+                    `Modified Gehan-Wilcoxon test` = ans3, check.names = F))
+}</code></pre>
+<p>Before measuring power let’s verify our statistics satisfy the desired false
+positive rate <span class="math inline">\(\alpha = 0.05\)</span> (5%) when both variants have the same conversion rates:</p>
+<pre class="r"><code>alpha &lt;- 0.05
+M &lt;- 500
+
+res &lt;- Reduce(&quot;rbind&quot;, lapply(1:M, function(m) run_simulation(m, alpha_ctrl, alpha_ctrl)))
+res &lt;- data.frame(Statistic = names(res), 
+                  `False positive rate` = format_pct(sapply(res, function(x) mean(x&lt;=alpha))), 
+                  check.names = F, row.names = NULL)
+knitr::kable(res, align = &quot;c&quot;)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="center">Statistic</th>
+<th align="center">False positive rate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">T-test conversions</td>
+<td align="center">5.6%</td>
+</tr>
+<tr class="even">
+<td align="center">T-test KM 7 day conversion</td>
+<td align="center">5.2%</td>
+</tr>
+<tr class="odd">
+<td align="center">Modified Gehan-Wilcoxon test</td>
+<td align="center">5.8%</td>
+</tr>
+</tbody>
+</table>
+<p>Looks good.</p>
+<p>Next, let’s examine power:</p>
+<pre class="r"><code>M &lt;- 2000
+res &lt;- Reduce(&quot;rbind&quot;, lapply(1:M, function(m) run_simulation(m, alpha_ctrl, alpha_trt)))
+res &lt;- data.frame(Statistic = names(res), 
+                  Power = sapply(res, function(x) mean(x&lt;=alpha)), 
+                  check.names = F, row.names = NULL)
+uplift_logrank &lt;- format_pct((res[3,2] - res[1,2])/res[1,2])
+uplift_km &lt;- format_pct((res[2,2] - res[1,2])/res[1,2])
+res$Power &lt;- format_pct(res$Power)
+knitr::kable(res, align = &quot;c&quot;)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="center">Statistic</th>
+<th align="center">Power</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">T-test conversions</td>
+<td align="center">77.7%</td>
+</tr>
+<tr class="even">
+<td align="center">T-test KM 7 day conversion</td>
+<td align="center">78.3%</td>
+</tr>
+<tr class="odd">
+<td align="center">Modified Gehan-Wilcoxon test</td>
+<td align="center">85%</td>
+</tr>
+</tbody>
+</table>
+<p>While the T-test on KM 7 day conversion relates better to business KPIs than the T-test on conversions (the common procedure), it is only marginally more powerful.</p>
+<p>The modified Gehan-Wilcoxon statistic on the other hand yields a substantial
+uplift in power, while only weakly relating to the business KPIs like the regular
+conversions T-test.</p>
+<p>It should be noted that the power gains vary somewhat according to the point compared
+on the survival curve, the actual survival curve shape, experiment duration etc.</p>
+<p>In a future post I hope to further explore this topic over a wider set of scenarios
+and test statistics (The <a href="https://cran.r-project.org/web/packages/ComparisonSurv/index.html">ComparisonSurv</a>
+package in R looks promising).</p>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>When doing A/B testing in scenarios where time to convert varies - it’s often
+useful to apply survival analysis to take advantage of the time dimension. Either
+compare a point of interest on the survival curve to make the result relate directly
+to the business KPIs, or use the modified Gehan-Wilcoxon statistic statistic for improved power.</p>
+</div>
+
+    </div>
+  </article>
+
+  
+<section id="comments">
+  <div id="disqus_thread"></div>
+  <script>
+  var disqus_config = function () {
+  
+  };
+  (function() {
+    var inIFrame = function() {
+      var iframe = true;
+      try { iframe = window.self !== window.top; } catch (e) {}
+      return iframe;
+    };
+    if (inIFrame()) return;
+    var d = document, s = d.createElement('script');
+    s.src = '//just-be-cause.disqus.com/embed.js'; s.async = true;
+    s.setAttribute('data-timestamp', +new Date());
+    (d.head || d.body).appendChild(s);
+  })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</section>
+
+
+
+</main>
+
+      <footer class="footer">
+        <ul class="footer-links">
+          <li>
+            <a href="/index.xml" type="application/rss+xml" target="_blank">RSS feed</a>
+          </li>
+          <li>
+            <a href="https://gohugo.io/" class="footer-links-kudos">Made with <img src="/images/hugo-logo.png" alt="Img link to Hugo website" width="22" height="22"></a>
+          </li>
+        </ul>
+      </footer>
+
+    </div>
+    
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+    
+<script src="/js/math-code.js"></script>
+<script async src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+
+    
+  </body>
+</html>
+

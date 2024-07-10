@@ -6,7 +6,52 @@
     <description>Recent content in Tags on Just be-cause</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 27 May 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Wed, 10 Jul 2024 00:00:00 +0000</lastBuildDate><atom:link href="https://iyarlin.github.io/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>classification</title>
+      <link>https://iyarlin.github.io/tags/classification/</link>
+      <pubDate>Wed, 10 Jul 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/classification/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>R</title>
+      <link>https://iyarlin.github.io/tags/r/</link>
+      <pubDate>Wed, 10 Jul 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>simulation</title>
+      <link>https://iyarlin.github.io/tags/simulation/</link>
+      <pubDate>Wed, 10 Jul 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/simulation/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>survival_analysis</title>
+      <link>https://iyarlin.github.io/tags/survival_analysis/</link>
+      <pubDate>Wed, 10 Jul 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/survival_analysis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>testing</title>
+      <link>https://iyarlin.github.io/tags/testing/</link>
+      <pubDate>Wed, 10 Jul 2024 00:00:00 +0000</pubDate>
+      
+      <guid>https://iyarlin.github.io/tags/testing/</guid>
+      <description></description>
+    </item>
+    
     <item>
       <title>churn</title>
       <link>https://iyarlin.github.io/tags/churn/</link>
@@ -17,47 +62,11 @@
     </item>
     
     <item>
-      <title>classification</title>
-      <link>https://iyarlin.github.io/tags/classification/</link>
-      <pubDate>Mon, 27 May 2024 00:00:00 +0000</pubDate>
-      
-      <guid>https://iyarlin.github.io/tags/classification/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>ML</title>
       <link>https://iyarlin.github.io/tags/ml/</link>
       <pubDate>Mon, 27 May 2024 00:00:00 +0000</pubDate>
       
       <guid>https://iyarlin.github.io/tags/ml/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>R</title>
-      <link>https://iyarlin.github.io/tags/r/</link>
-      <pubDate>Mon, 27 May 2024 00:00:00 +0000</pubDate>
-      
-      <guid>https://iyarlin.github.io/tags/r/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>simulation</title>
-      <link>https://iyarlin.github.io/tags/simulation/</link>
-      <pubDate>Mon, 27 May 2024 00:00:00 +0000</pubDate>
-      
-      <guid>https://iyarlin.github.io/tags/simulation/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>survival_analysis</title>
-      <link>https://iyarlin.github.io/tags/survival_analysis/</link>
-      <pubDate>Mon, 27 May 2024 00:00:00 +0000</pubDate>
-      
-      <guid>https://iyarlin.github.io/tags/survival_analysis/</guid>
       <description></description>
     </item>
     
