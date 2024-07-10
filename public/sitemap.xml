@@ -2,6 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
+    <loc>https://iyarlin.github.io/tags/ab_testing/</loc>
+    <lastmod>2024-07-10T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>https://iyarlin.github.io/2024/07/10/better_ab_testing_with_survival/</loc>
     <lastmod>2024-07-10T00:00:00+00:00</lastmod>
   </url><url>
@@ -30,9 +33,6 @@
     <lastmod>2024-07-10T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://iyarlin.github.io/tags/</loc>
-    <lastmod>2024-07-10T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>https://iyarlin.github.io/tags/testing/</loc>
     <lastmod>2024-07-10T00:00:00+00:00</lastmod>
   </url><url>
     <loc>https://iyarlin.github.io/2024/05/27/better_churn_modeling_part_3/</loc>

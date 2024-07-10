@@ -77,7 +77,7 @@
 
 <center>
 <div class="float">
-<img src="/post/better_ab_testing_with_survival_files/scientist_survival_kit.jpeg" width="450" height="350" alt="Pic by author - using DALL-E 3" />
+<img src="/post/better_ab_testing_with_survival_files/scientist_survival_kit.jpeg" width="600" height="350" alt="Pic by author - using DALL-E 3" />
 <div class="figcaption">Pic by author - using DALL-E 3</div>
 </div>
 </center>
@@ -122,7 +122,7 @@ with methods that do take conversion timing into account.</li>
 <h1>Simulation study</h1>
 <p>We’ll have users join the experiment randomly over a 30 day period. Users’ time
 to convert will be simulated from a Weibull distribution with scale
-<span class="math inline">\(\sigma = 30,000\)</span> and <span class="math inline">\(\alpha_{\text{ctrl}}=0.18\)</span> for the control group and <span class="math inline">\(\alpha_{\text{ctrl}}=0.157\)</span> for the treatment group.</p>
+<span class="math inline">\(\sigma = 30,000\)</span> and <span class="math inline">\(\alpha_{\text{ctrl}}=0.18\)</span> for the control group and <span class="math inline">\(\alpha_{\text{trt}}=0.157\)</span> for the treatment group.</p>
 <p>Below are the corresponding survival curves:</p>
 <pre class="r"><code>alpha_ctrl &lt;- 0.18
 alpha_trt &lt;- 0.157
