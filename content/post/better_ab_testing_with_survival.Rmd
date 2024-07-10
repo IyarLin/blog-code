@@ -63,7 +63,7 @@ To demonstrate point #2 we'll run a small simulation study
 
 We'll have users join the experiment randomly over a 30 day period. Users' time 
 to convert will be simulated from a Weibull distribution with scale 
-$\sigma = 30,000$ and $\alpha_{\text{ctrl}}=0.18$ for the control group and $\alpha_{\text{ctrl}}=0.157$ for the treatment group. 
+$\sigma = 30,000$ and $\alpha_{\text{ctrl}}=0.18$ for the control group and $\alpha_{\text{trt}}=0.157$ for the treatment group. 
 
 Below are the corresponding survival curves:
 
